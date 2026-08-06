@@ -1,0 +1,11 @@
+/data
+
+*-journal
+*-wal
+*-shm
+
+.env
+.env.*
+*.local
+
+.vscode/
