@@ -5,50 +5,64 @@ import (
 	"time"
 )
 
-func (g *Gasto) GerarParcelas(cartao *Cartao) ([]Parcela, error) {
-	var parcelas []Parcela
+// InstallmentGenarate cria novas compras menores de um cartão (card) a partir de uma compra caso esta tenha sido parcelada.
+// Retorna um slice de Installment com os valores dos parcelamentos e error.
+func (g *Expense) InstallmentGenerate(card *Card) ([]Installment, error) {
+	// Slice de parcelas que será retornado
+	var installments []Installment
 
-	dataCompra, err := time.Parse("2006-01-02", g.DataCompra)
+	// Verificação da formatação da data de compra
+	PurchaseDate, err := time.Parse("2006-01-02", g.PurchaseDate)
 	if err != nil {
 		return nil, err
 	}
 
-	dataBase := dataCompra
+	baseDate := PurchaseDate
 
-	if cartao != nil && cartao.Tipo == 0 {
-		if dataCompra.Day() >= int(cartao.DiaFechamento) {
-			dataBase = dataBase.AddDate(0, 1, 0)
+	// Cartão existe e é cartão de crédito
+	if card != nil && card.Type == 0 {
+		// Valores são lançados conforme regras de cartões de crédito
+		if PurchaseDate.Day() >= int(card.ClosingDay) {
+			baseDate = baseDate.AddDate(0, 1, 0)
+		}
+		if card.DueDay < card.ClosingDay {
+			baseDate = baseDate.AddDate(0, 1, 0)
 		}
 
-		if cartao.DiaVencimento < cartao.DiaFechamento {
-			dataBase = dataBase.AddDate(0, 1, 0)
-		}
-
-		dataBase = time.Date(dataBase.Year(), dataBase.Month(), int(cartao.DiaVencimento), 0, 0, 0, 0, dataBase.Location())
+		// Data formatada como YYYY-MM-DD
+		baseDate = time.Date(baseDate.Year(), baseDate.Month(), int(card.DueDay), 0, 0, 0, 0, baseDate.Location())
 	}
 
-	valorBase := math.Floor((g.ValorTotal / float64(g.TotalParcelas)) * 100 / 100)
+	// Valor base do parcelamento
+	// Pega apenas duas casas decimais de números reais
+	baseValue := math.Floor((g.TotalValue/float64(g.TotalInstallments))*100) / 100
 
-	primeiraParcelaValor := g.ValorTotal - (valorBase * float64(g.TotalParcelas-1))
-	primeiraParcelaValor = math.Round(primeiraParcelaValor*100) / 100
+	// Problemas de centavos
+	// Compras com dizimas, a primeira parcela absorve a diferença
+	firstInstallmentValue := g.TotalValue - (baseValue * float64(g.TotalInstallments-1))
+	firstInstallmentValue = math.Round(firstInstallmentValue*100) / 100
 
-	for i := uint8(1); i < g.TotalParcelas; i++ {
-		dataCobranca := dataBase.AddDate(0, int(i-1), 0)
-		valorParcela := valorBase
-		if i == 1 {
-			valorParcela = primeiraParcelaValor
+	// Inclui os valores no slice de parcelas
+	// Os valores incluídos serão o valor base ou o valor da primeira parcela.
+	firstInstallment := Installment{
+		ExpenseId:          g.Id,
+		NumberInstallments: 1,
+		Value:              firstInstallmentValue,
+		DueDate:            baseDate.Format("2006-01-02"),
+		PaymentStatus:      0,
+	}
+	installments = append(installments, firstInstallment)
+
+	for i := uint8(2); i <= g.TotalInstallments; i++ {
+		installment := Installment{
+			ExpenseId:          g.Id,
+			NumberInstallments: i,
+			Value:              baseValue,
+			DueDate:            baseDate.AddDate(0, int(i-1), 0).Format("2006-01-02"),
+			PaymentStatus:      0,
 		}
-
-		parcela := Parcela{
-			GastoId:         g.Id,
-			NumeroParcela:   i,
-			Valor:           valorParcela,
-			DataCobranca:    dataCobranca.Format("2006-01-02"),
-			StatusPagamento: 0,
-		}
-
-		parcelas = append(parcelas, parcela)
+		installments = append(installments, installment)
 	}
 
-	return parcelas, nil
+	return installments, nil
 }

@@ -26,39 +26,39 @@ func InitDB(dbPath string) (*sql.DB, error) {
 
 func createTables(db *sql.DB) error {
 	query := `
-	CREATE TABLE IF NOT EXISTS pessoa (
+	CREATE TABLE IF NOT EXISTS person (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		nome TEXT NOT NULL
+		name TEXT NOT NULL
 	);
 
-	CREATE TABLE IF NOT EXISTS cartao (
+	CREATE TABLE IF NOT EXISTS card (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		nome TEXT NOT NULL,
-		tipo INTEGER NOT NULL, -- 0 para crédito, 1 para débito
-		dia_fechamentO INTEGER,
-		dia_vencimento INTEGER 
+		name TEXT NOT NULL,
+		type INTEGER NOT NULL, -- 0 para crédito, 1 para débito
+		closing_day INTEGER,
+		due_day INTEGER 
 	);
 
-	CREATE TABLE IF NOT EXISTS gasto (
+	CREATE TABLE IF NOT EXISTS expense (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		descricao TEXT NOT NULL,
-		valor_total REAL NOT NULL,
-		data_compra TEXT NOT NULL, -- Formato YYYY-MM-DD
-		total_parcelas INTEGER NOT NULL,
-		pessoa_id INTEGER,
-		cartao_id INTEGER,
-		FOREIGN KEY(pessoa_id) REFERENCES pessoa(id),
-		FOREIGN KEY(cartao_id) REFERENCES cartao(id)
+		description TEXT NOT NULL,
+		total_value REAL NOT NULL,
+		purchase_date TEXT NOT NULL, -- Formato YYYY-MM-DD
+		total_installments INTEGER NOT NULL,
+		person_id INTEGER,
+		card_id INTEGER,
+		FOREIGN KEY(person_id) REFERENCES person(id),
+		FOREIGN KEY(card_id) REFERENCES card(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS parcela (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		gasto_id INTEGER,
-		numero_parecela INTEGER NOT NULL,
-		valor REAL NOT NULL,
-		data_cobranca TEXT NOT NULL, -- Formato YYYY-MM-DD
-		status_pagamento INTEGER NOT NULL, -- 0 para pendente, 1 para pago
-		FOREIGN KEY(gasto_id) REFERENCES gasto(id)
+		expense_id INTEGER,
+		number_installments INTEGER NOT NULL,
+		value REAL NOT NULL,
+		due_date TEXT NOT NULL, -- Formato YYYY-MM-DD
+		payment_status INTEGER NOT NULL, -- 0 para pendente, 1 para pago
+		FOREIGN KEY(expense_id) REFERENCES expense(id)
 	);
 	`
 

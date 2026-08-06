@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func ParseGasto(input string, pessoas map[string]uint, cartoes map[string]uint) (*domain.Gasto, error) {
+func ExpenseParser(input string, people map[string]uint, cards map[string]uint) (*domain.Expense, error) {
 	input = strings.TrimSpace(input)
 
 	// Input vazio é inválido
@@ -16,6 +16,7 @@ func ParseGasto(input string, pessoas map[string]uint, cartoes map[string]uint) 
 		return nil, errors.New("input vazio")
 	}
 
+	// Cria os tokens a partir de input
 	tokens := strings.Fields(input)
 
 	// Input abaixo de 2 tokens é inválido
@@ -24,50 +25,59 @@ func ParseGasto(input string, pessoas map[string]uint, cartoes map[string]uint) 
 		return nil, errors.New("formato invalido, esperado pelo menos: <valor> <descricao>")
 	}
 
-	gasto := &domain.Gasto{
-		TotalParcelas: 1,
+	// Numéro de parcelas é 1 por padrão
+	// Usado caso não seja informado o número.
+	expense := &domain.Expense{
+		TotalInstallments: 1,
 	}
 
-	valorStr := strings.Replace(tokens[0], ",", ".", 1)
-	valor, err := strconv.ParseFloat(valorStr, 64)
+	// Converte o padrão brasileiro de decimal para o americano
+	valueStr := strings.Replace(tokens[0], ",", ".", 1)
+	value, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
 		return nil, errors.New("o primeiro termo deve ser um valor numerico")
 	}
-	gasto.ValorTotal = valor
+	expense.TotalValue = value
 
-	reParcela := regexp.MustCompile(`^(\d+)[xX]$`)
+	// Regex para procurar token de parcelamento
+	reInstallment := regexp.MustCompile(`^(\d+)[xX]$`)
 
 	var descTokens []string
 
+	// Varre os tokens restantes
+	// Procura por: parcelamento, pessoa, cartão e descrição
 	for _, token := range tokens[1:] {
 		tokenLower := strings.ToLower(token)
 
-		if match := reParcela.FindStringSubmatch(tokenLower); match != nil {
-			parcelas, _ := strconv.Atoi(match[1])
-			gasto.TotalParcelas = uint8(parcelas)
+		// Parcelamento
+		if match := reInstallment.FindStringSubmatch(tokenLower); match != nil {
+			installments, _ := strconv.Atoi(match[1])
+			expense.TotalInstallments = uint8(installments)
 			continue
 		}
 
-		if id, existe := pessoas[tokenLower]; existe {
+		// Pessoa
+		if id, existe := people[tokenLower]; existe {
 			idCopy := id
-			gasto.PessoaId = &idCopy
+			expense.PersonId = &idCopy
 			continue
 		}
 
-		if id, existe := cartoes[tokenLower]; existe {
+		// Cartão
+		if id, existe := cards[tokenLower]; existe {
 			idCopy := id
-			gasto.CartaoId = &idCopy
+			expense.CardId = &idCopy
 			continue
 		}
 
+		// Descrição (resto)
 		descTokens = append(descTokens, token)
 	}
 
-	gasto.Descricao = strings.Join(descTokens, " ")
-
-	if gasto.Descricao == "" {
+	expense.Description = strings.Join(descTokens, " ")
+	if expense.Description == "" {
 		return nil, errors.New("a descricao nao pode ser vazia")
 	}
 
-	return gasto, nil
+	return expense, nil
 }

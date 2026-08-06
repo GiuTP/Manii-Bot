@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestParseGasto(t *testing.T) {
-	mockPessoas := map[string]uint{
+func TestExpenseParser(t *testing.T) {
+	mockPeople := map[string]uint{
 		"giuliano": 1,
 		"giuliany": 2,
 		"patricia": 3,
@@ -16,96 +16,95 @@ func TestParseGasto(t *testing.T) {
 		"henrique": 8,
 	}
 
-	mockCartoes := map[string]uint{
+	mockCards := map[string]uint{
 		"bradesco": 1,
 		"mp":       2,
 	}
 
-	testes := []struct {
-		nome           string
-		input          string
-		esperaErro     bool
-		esperaValor    float64
-		esperaDesc     string
-		esperaParcelas uint8
-		esperaPessoa   uint
-		esperaCartao   uint
+	tests := []struct {
+		name             string
+		input            string
+		waitError        bool
+		waitValue        float64
+		waitDesc         string
+		waitInstallments uint8
+		waitPerson       uint
+		waitCard         uint
 	}{
 		{
-			nome:           "Gasto básico apenas com valor e descrição",
-			input:          "45.90 Ifood",
-			esperaErro:     false,
-			esperaValor:    45.90,
-			esperaDesc:     "Ifood",
-			esperaParcelas: 1, // Padrão
+			name:             "Gasto básico apenas com valor e descrição",
+			input:            "45.90 Ifood",
+			waitError:        false,
+			waitValue:        45.90,
+			waitDesc:         "Ifood",
+			waitInstallments: 1,
 		},
 		{
-			nome:           "Gasto completo com vírgula, fora de ordem",
-			input:          "150,50 burger king giuliany bradesco 3x",
-			esperaErro:     false,
-			esperaValor:    150.50,
-			esperaDesc:     "burger king", // Juntou o que sobrou
-			esperaParcelas: 3,
-			esperaPessoa:   2, // ID da giuliany no mock
-			esperaCartao:   1, // ID do bradesco no mock
+			name:             "Gasto completo com vírgula, fora de ordem",
+			input:            "150,50 burger king giuliany bradesco 3x",
+			waitError:        false,
+			waitValue:        150.50,
+			waitDesc:         "burger king",
+			waitInstallments: 3,
+			waitPerson:       2,
+			waitCard:         1,
 		},
 		{
-			nome:           "Gasto com outra ordem e outro cartao",
-			input:          "20.00 uber 2x bradesco giuliano",
-			esperaErro:     false,
-			esperaValor:    20.00,
-			esperaDesc:     "uber",
-			esperaParcelas: 2,
-			esperaPessoa:   1,
-			esperaCartao:   1,
+			name:             "Gasto com outra ordem e outro cartao",
+			input:            "20.00 uber 2x mp giuliano",
+			waitError:        false,
+			waitValue:        20.00,
+			waitDesc:         "uber",
+			waitInstallments: 2,
+			waitPerson:       1,
+			waitCard:         2,
 		},
 		{
-			nome:       "Erro: Falta a descrição",
-			input:      "50.00 mp",
-			esperaErro: true, // "mp" é removido e não sobra nada para a descrição
+			name:      "Erro: Falta a descrição",
+			input:     "50.00 mp",
+			waitError: true,
 		},
 		{
-			nome:       "Erro: Valor inválido",
-			input:      "abc Ifood",
-			esperaErro: true,
+			name:      "Erro: Valor inválido",
+			input:     "abc Ifood",
+			waitError: true,
 		},
 	}
 
-	for _, tt := range testes {
-		t.Run(tt.nome, func(t *testing.T) {
-			gasto, err := ParseGasto(tt.input, mockPessoas, mockCartoes)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expense, err := ExpenseParser(tt.input, mockPeople, mockCards)
 
-			if tt.esperaErro {
+			if tt.waitError {
 				if err == nil {
 					t.Errorf("Esperava um erro, mas não ocorreu")
 				}
-				return // Se esperava erro e deu erro, o teste passou, vai pro próximo
+				return
 			}
 
 			if err != nil {
 				t.Fatalf("Não esperava erro, mas ocorreu: %v", err)
 			}
 
-			if gasto.ValorTotal != tt.esperaValor {
-				t.Errorf("Valor incorreto. Esperado: %v, Recebido: %v", tt.esperaValor, gasto.ValorTotal)
+			if expense.TotalValue != tt.waitValue {
+				t.Errorf("Valor incorreto. Esperado: %v, Recebido: %v", tt.waitValue, expense.TotalValue)
 			}
-			if gasto.Descricao != tt.esperaDesc {
-				t.Errorf("Descrição incorreta. Esperada: '%v', Recebida: '%v'", tt.esperaDesc, gasto.Descricao)
+			if expense.Description != tt.waitDesc {
+				t.Errorf("Descrição incorreta. Esperada: '%v', Recebida: '%v'", tt.waitDesc, expense.Description)
 			}
-			if gasto.TotalParcelas != tt.esperaParcelas {
-				t.Errorf("Parcelas incorretas. Esperado: %v, Recebido: %v", tt.esperaParcelas, gasto.TotalParcelas)
+			if expense.TotalInstallments != tt.waitInstallments {
+				t.Errorf("Parcelas incorretas. Esperado: %v, Recebido: %v", tt.waitInstallments, expense.TotalInstallments)
 			}
 
-			// Verificações com ponteiros exigem cuidado para não dar erro de nil pointer
-			if tt.esperaPessoa != 0 {
-				if gasto.PessoaId == nil || *gasto.PessoaId != tt.esperaPessoa {
-					t.Errorf("Pessoa incorreta. Esperada: %v", tt.esperaPessoa)
+			if tt.waitPerson != 0 {
+				if expense.PersonId == nil || *expense.PersonId != tt.waitPerson {
+					t.Errorf("Pessoa incorreta. Esperada: %v", tt.waitPerson)
 				}
 			}
 
-			if tt.esperaCartao != 0 {
-				if gasto.CartaoId == nil || *gasto.CartaoId != tt.esperaCartao {
-					t.Errorf("Cartão incorreto. Esperado: %v", tt.esperaCartao)
+			if tt.waitCard != 0 {
+				if expense.CardId == nil || *expense.CardId != tt.waitCard {
+					t.Errorf("Cartão incorreto. Esperado: %v", tt.waitCard)
 				}
 			}
 		})
