@@ -5,6 +5,16 @@ import (
 	"time"
 )
 
+// Installment representa o parcelamento de uma compra. Usa Expense.
+type Installment struct {
+	Id                 uint    // Idenficação
+	ExpenseId          uint    // Compra original em Expense
+	NumberInstallments uint8   // Parcela atual. Usado para mostrar em qual parcela estar.
+	Value              float64 // Valor da parcela
+	DueDate            string  // Data de vencimento
+	PaymentStatus      uint8   // Status de parcela. 0 para pendente e 1 para paga.
+}
+
 // InstallmentGenarate cria novas compras menores de um cartão (card) a partir de uma compra caso esta tenha sido parcelada.
 // Retorna um slice de Installment com os valores dos parcelamentos e error.
 func (g *Expense) InstallmentGenerate(card *Card) ([]Installment, error) {
