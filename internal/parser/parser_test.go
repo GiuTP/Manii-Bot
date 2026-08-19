@@ -1,24 +1,25 @@
 package parser
 
 import (
+	"gfinancer/internal/domain"
 	"testing"
 )
 
 func TestExpenseParser(t *testing.T) {
-	mockPeople := map[string]uint{
-		"giuliano": 1,
-		"giuliany": 2,
-		"patricia": 3,
-		"melissa":  4,
-		"aylton":   5,
-		"ryan":     6,
-		"carina":   7,
-		"henrique": 8,
+	mockPeople := map[string]domain.Person{
+		"giuliano": {Id: 1},
+		"giuliany": {Id: 2},
+		"patricia": {Id: 3},
+		"melissa":  {Id: 4},
+		"aylton":   {Id: 5},
+		"ryan":     {Id: 6},
+		"carina":   {Id: 7},
+		"henrique": {Id: 8},
 	}
 
-	mockCards := map[string]uint{
-		"bradesco": 1,
-		"mp":       2,
+	mockCards := map[string]domain.Card{
+		"bradesco": {Id: 1},
+		"mp":       {Id: 2},
 	}
 
 	tests := []struct {

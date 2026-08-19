@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func ExpenseParser(input string, people map[string]uint, cards map[string]uint) (*domain.Expense, error) {
+func ExpenseParser(input string, people map[string]domain.Person, cards map[string]domain.Card) (*domain.Expense, error) {
 	input = strings.TrimSpace(input)
 
 	// Input vazio é inválido
@@ -57,16 +57,16 @@ func ExpenseParser(input string, people map[string]uint, cards map[string]uint) 
 		}
 
 		// Pessoa
-		if id, existe := people[tokenLower]; existe {
-			idCopy := id
-			expense.PersonId = &idCopy
+		if p, existe := people[tokenLower]; existe {
+			pCopy := p
+			expense.PersonId = &pCopy.Id
 			continue
 		}
 
 		// Cartão
-		if id, existe := cards[tokenLower]; existe {
-			idCopy := id
-			expense.CardId = &idCopy
+		if c, existe := cards[tokenLower]; existe {
+			cCopy := c
+			expense.CardId = &cCopy.Id
 			continue
 		}
 

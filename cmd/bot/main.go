@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gfinancer/internal/storage"
+	"gfinancer/internal/repository"
 	"log"
 )
 
@@ -11,7 +11,7 @@ func main() {
 
 	dbPath := "./data/financas.db"
 
-	db, err := storage.InitDB(dbPath)
+	db, err := repository.InitDB(dbPath)
 	if err != nil {
 		log.Fatalf("Falha crítica ao inicializar o banco: %v\n", err)
 	}
