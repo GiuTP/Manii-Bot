@@ -1,4 +1,4 @@
-package storage
+package repository
 
 import (
 	"database/sql"
@@ -45,7 +45,7 @@ func TestExpenseRepository_Save(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := NewExpense(db)
+	repo := NewExpenseRepo(db)
 
 	t.Run("Sucesso: Insere despesa e 3 parcelas", func(t *testing.T) {
 		pessoaId := uint(1)

@@ -1,4 +1,4 @@
-package storage
+package repository
 
 import (
 	"database/sql"
@@ -7,6 +7,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// InitDB inicializa a conexão com o banco de dados, criando-o em dbPath.
+// Cria todas as tabelas definidas na modelagem.
+// Retorna um ponteiro para o bd criado e possíveis erros.
 func InitDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -24,22 +27,26 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
+// createTables cria todas as tabelas de entidades definidas na modelagem
+// Retorna possível erro.
 func createTables(db *sql.DB) error {
 	query := `
-	CREATE TABLE IF NOT EXISTS person (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS card (
+	CREATE TABLE IF NOT EXISTS persons (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
+		active INTEGER NOT NULL -- 0 para inativo, 1 para ativo
+	);
+
+	CREATE TABLE IF NOT EXISTS cards (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		active INTEGER NOT NULL -- 0 para inativo, 1 para ativo
 		type INTEGER NOT NULL, -- 0 para crédito, 1 para débito
 		closing_day INTEGER,
 		due_day INTEGER 
 	);
 
-	CREATE TABLE IF NOT EXISTS expense (
+	CREATE TABLE IF NOT EXISTS expenses (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		description TEXT NOT NULL,
 		total_value REAL NOT NULL,
@@ -47,11 +54,11 @@ func createTables(db *sql.DB) error {
 		total_installments INTEGER NOT NULL,
 		person_id INTEGER,
 		card_id INTEGER,
-		FOREIGN KEY(person_id) REFERENCES person(id),
-		FOREIGN KEY(card_id) REFERENCES card(id)
+		FOREIGN KEY(person_id) REFERENCES persons(id),
+		FOREIGN KEY(card_id) REFERENCES cards(id)
 	);
 
-	CREATE TABLE IF NOT EXISTS parcela (
+	CREATE TABLE IF NOT EXISTS installments (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		expense_id INTEGER,
 		number_installments INTEGER NOT NULL,
