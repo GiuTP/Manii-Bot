@@ -1,22 +1,44 @@
 package main
 
 import (
-	"fmt"
 	"gfinancer/internal/repository"
+	"gfinancer/internal/services"
+	"gfinancer/internal/telegram"
 	"log"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	fmt.Println("Iniciano o Gerenciador Financeiro...")
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Aviso: arquivo .env não encontrado na raiz")
+	}
 
-	dbPath := "./data/financas.db"
+	token := os.Getenv("TELEGRAM_TOKEN")
+	if token == "" {
+		log.Fatal("TELEGRAM TOKEN não está definido no arquivo .env")
+	}
 
-	db, err := repository.InitDB(dbPath)
+	db, err := repository.InitDB("./data/financas.db")
 	if err != nil {
 		log.Fatalf("Falha crítica ao inicializar o banco: %v\n", err)
 	}
 
 	defer db.Close()
 
-	fmt.Println("Banco de dados inicializado e tabelas criadas com sucesso em:", dbPath)
+	expRepo := repository.NewExpenseRepo(db)
+	cardExp := repository.NewCard(db)
+	persExp := repository.NewPersonRepo(db)
+
+	botService := services.NewBotService(expRepo, cardExp, persExp)
+
+	bot, err := telegram.NewTelegramBot(token, botService)
+	if err != nil {
+		log.Fatal("Erro ao inicializar o bot: ", err)
+	}
+
+	log.Println("Sistema inicializado com sucesso. Aguardando mensagens.")
+	bot.Start()
 }
