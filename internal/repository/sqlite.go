@@ -40,7 +40,7 @@ func createTables(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS cards (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
-		active INTEGER NOT NULL -- 0 para inativo, 1 para ativo
+		active INTEGER NOT NULL, -- 0 para inativo, 1 para ativo
 		type INTEGER NOT NULL, -- 0 para crédito, 1 para débito
 		closing_day INTEGER,
 		due_day INTEGER 
@@ -65,7 +65,7 @@ func createTables(db *sql.DB) error {
 		value REAL NOT NULL,
 		due_date TEXT NOT NULL, -- Formato YYYY-MM-DD
 		payment_status INTEGER NOT NULL, -- 0 para pendente, 1 para pago
-		FOREIGN KEY(expense_id) REFERENCES expense(id)
+		FOREIGN KEY(expense_id) REFERENCES expenses(id)
 	);
 	`
 
