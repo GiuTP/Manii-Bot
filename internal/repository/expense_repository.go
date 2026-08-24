@@ -2,22 +2,27 @@ package repository
 
 import (
 	"database/sql"
+
 	"gfinancer/internal/domain"
 )
 
-// ExpenseRepo é a estrutura que guarda o ponteiro da conexão com o banco de dados da tabela "expense"
+// *****************************
+// ** CRUD de repositório expense
+// *****************************
+
+// ExpenseRepo gerencia a persistência e operações de banco de dados para a entidade de despesas e suas parcelas.
 type ExpenseRepo struct {
 	db *sql.DB
 }
 
-// NewExpenseRepo é a função construtora de ExpenseRepo
+// NewExpenseRepo cria e retorna uma nova instância de ExpenseRepo utilizando a conexão de banco de dados fornecida.
 func NewExpenseRepo(db *sql.DB) *ExpenseRepo {
 	return &ExpenseRepo{db: db}
 }
 
-// Save recebe um gasto (expense) e o cartão que este gasto está atrelado e em seguida
-// salva no banco de dados o gasto e o parcelamento.
-// Retorna error se não foi possível concluir.
+// Save cria uma nova despesa e registra todas as suas respectivas parcelas em uma transação atômica.
+// O ID autoincrementado gerado pelo banco é atribuído à própria estrutura da despesa fornecida.
+// Retorna um erro caso a transação falhe ou ocorra problema na geração das parcelas.
 func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 	// Inicia a conexão com o banco de dados, abrindo uma transação
 	tx, err := r.db.Begin()
@@ -25,15 +30,14 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 		return err
 	}
 
-	// Agendamento de rollback. Em caso de qualquer erro durante a execução, o rollback será executado.
+	// Agendamento de rollback, garantindo atomocidade.
 	defer tx.Rollback()
 
-	// Preparação e execução da query SQL em "expenses"
-	queryExpense := `
+	query := `
 		INSERT INTO expenses (description, total_value, total_installments, purchase_date, person_id, card_id)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	res, err := tx.Exec(queryExpense,
+	res, err := tx.Exec(query,
 		expense.Description,
 		expense.TotalValue,
 		expense.TotalInstallments,
@@ -45,12 +49,11 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 		return err
 	}
 
-	// Pega o último gasto inserido (inserido logo acima) em "expenses"
-	expenseId, err := res.LastInsertId()
+	id, err := res.LastInsertId()
 	if err != nil {
 		return err
 	}
-	expense.Id = uint(expenseId)
+	expense.Id = uint(id)
 
 	// Gerador de slice de parcelas
 	installments, err := expense.InstallmentGenerate(card)
@@ -58,14 +61,13 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 		return err
 	}
 
-	// Preparação de query SQL em "installments"
-	queryInstallment := `
+	query = `
 		INSERT INTO installments (expense_id, number_installment, value, due_date, payment_status)
 		VALUES (?, ?, ?, ?, ?)
 	`
 	// Inserção de query SQL em "installments"
 	for _, installment := range installments {
-		_, err = tx.Exec(queryInstallment,
+		_, err = tx.Exec(query,
 			installment.ExpenseId,
 			installment.NumberInstallments,
 			installment.Value,
@@ -85,13 +87,14 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 	return nil
 }
 
+// GetAll busca todas as despesas cadastradas no banco de dados ordenadas pela data de compra mais recente para a mais antiga.
+// Retorna um sliced com todas as despesas encontradas, ou um erro se a consulta falhar.
 func (r *ExpenseRepo) GetAll() ([]domain.Expense, error) {
 	query := `
-		SELECT id, description, total_value, total_installments, purchase_data, person_id, card_id
+		SELECT id, description, total_value, total_installments, purchase_date, person_id, card_id
 		FROM expenses
 		ORDER BY purchase_Date DESC
 	`
-
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -100,7 +103,6 @@ func (r *ExpenseRepo) GetAll() ([]domain.Expense, error) {
 	defer rows.Close()
 
 	var expenses []domain.Expense
-
 	for rows.Next() {
 		var e domain.Expense
 
@@ -126,7 +128,8 @@ func (r *ExpenseRepo) GetAll() ([]domain.Expense, error) {
 	return expenses, nil
 }
 
-// Update atualiza apenas **metadados**
+// Update atualiza os metadados de uma despesa existente (descrição e pessoa associada) com base no seu ID.
+// Retorna sql.ErrNoRows se despesa não existir, ou outro erro em caso de falha na execução.
 func (r *ExpenseRepo) Update(expense *domain.Expense) error {
 	query := `
 		UPDATE expenses
@@ -155,7 +158,8 @@ func (r *ExpenseRepo) Update(expense *domain.Expense) error {
 	return nil
 }
 
-// Delete apaga (hard) uma expense e as installments vinculadas à ela.
+// Delete remove permanentemente (hard delete) uma despesa e todas as suas parcelas vinculadas em uma transação atômica.
+// Retorna sql.ErrNoRows se a despesa informada não existir, ou um erro caso ocorra falha durante a transação.
 func (r *ExpenseRepo) Delete(id uint) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -164,12 +168,14 @@ func (r *ExpenseRepo) Delete(id uint) error {
 
 	defer tx.Rollback()
 
+	// Apaga de installments
 	queryDeleteInstallments := `DELELE FROM installments WHERE expense_id = ?`
 	_, err = tx.Exec(queryDeleteInstallments, id)
 	if err != nil {
 		return err
 	}
 
+	// Apaga de expenses
 	queryDeleteExpense := `DELETE FROM expenses WHERE id = ?`
 	res, err := tx.Exec(queryDeleteExpense, id)
 	if err != nil {
@@ -184,6 +190,7 @@ func (r *ExpenseRepo) Delete(id uint) error {
 		return sql.ErrNoRows
 	}
 
+	// Commit
 	if err = tx.Commit(); err != nil {
 		return err
 	}

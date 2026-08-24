@@ -2,12 +2,18 @@ package parser
 
 import (
 	"errors"
-	"gfinancer/internal/domain"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"gfinancer/internal/domain"
 )
 
+// ExpenseParser converte uma mensagem de texto puro em uma estrutura de despesa.
+// A função extrai o valor monetário, número de parcelas, pessoa e cartão
+// com base nos mapas fornecidos, unindo o restante das palavras como descrição.
+// Retorna a despesa preenchida em caso de sucesso, ou um erro se o texto
+// for inválido ou não contiver um valor numérico.
 func ExpenseParser(input string, people map[string]domain.Person, cards map[string]domain.Card) (*domain.Expense, error) {
 	input = strings.TrimSpace(input)
 
@@ -22,7 +28,7 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 	// Input abaixo de 2 tokens é inválido
 	// É esperado <valor> <descrição> pelo menos
 	if len(tokens) < 2 {
-		return nil, errors.New("formato invalido, esperado pelo menos: <valor> <descricao>")
+		return nil, errors.New("formato inválido, esperado pelo menos descrição e valor da compra.")
 	}
 
 	// Numéro de parcelas é 1 por padrão
@@ -31,23 +37,28 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 		TotalInstallments: 1,
 	}
 
-	// Converte o padrão brasileiro de decimal para o americano
-	valueStr := strings.Replace(tokens[0], ",", ".", 1)
-	value, err := strconv.ParseFloat(valueStr, 64)
-	if err != nil {
-		return nil, errors.New("o primeiro termo deve ser um valor numerico")
-	}
-	expense.TotalValue = value
-
 	// Regex para procurar token de parcelamento
 	reInstallment := regexp.MustCompile(`^(\d+)[xX]$`)
+	// Regex para procurar token de valor (dinheiro)
+	reMoney := regexp.MustCompile(`^\d+[.,]\d{2}$`)
 
 	var descTokens []string
+	var valueFound bool
 
 	// Varre os tokens restantes
 	// Procura por: parcelamento, pessoa, cartão e descrição
-	for _, token := range tokens[1:] {
+	for _, token := range tokens {
 		tokenLower := strings.ToLower(token)
+
+		// Valor
+		if !valueFound && reMoney.MatchString(tokenLower) {
+			valueStr := strings.Replace(tokenLower, ",", ".", 1)
+			if value, err := strconv.ParseFloat(valueStr, 64); err == nil {
+				expense.TotalValue = value
+				valueFound = true
+				continue
+			}
+		}
 
 		// Parcelamento
 		if match := reInstallment.FindStringSubmatch(tokenLower); match != nil {
@@ -74,9 +85,16 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 		descTokens = append(descTokens, token)
 	}
 
+	// Valor não encontrado
+	// Caso de uso: compra grátis.
+	if !valueFound {
+		return nil, errors.New("valor não encontrado. Valor deve conter casas decimais, mesmo que '.00'")
+	}
+
+	// Une tokens de descrição para casos onde contém mais de uma string (mais comum)
 	expense.Description = strings.Join(descTokens, " ")
 	if expense.Description == "" {
-		return nil, errors.New("a descricao nao pode ser vazia")
+		return nil, errors.New("a descrição não pode ser vazia")
 	}
 
 	return expense, nil
