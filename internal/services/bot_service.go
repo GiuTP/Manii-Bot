@@ -57,7 +57,7 @@ func (s *BotService) HandleMessage(rawMsg string) (string, error) {
 	case "/help", "/h":
 		return s.listCmds(), nil
 	default:
-		return "Comando inexistente. Para listagem digite \\help|h", nil
+		return "Comando inexistente. Para listagem digite /help|h", nil
 	}
 
 	return "", nil
