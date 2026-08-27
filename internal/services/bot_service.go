@@ -27,47 +27,109 @@ func NewBotService(e *repository.ExpenseRepo, c *repository.CardRepo, p *reposit
 
 func (s *BotService) HandleMessage(rawMsg string) (string, error) {
 	tokens := strings.SplitN(rawMsg, " ", 2)
-	cmd := tokens[0]
-
-	var msg string
-	if len(tokens) > 1 {
-		msg = tokens[1]
+	if len(tokens) < 1 {
+		return "", errors.New("Comando vazio. Tente /help")
 	}
+	cmd := tokens[0]
+	msg := tokens[1]
 
+	// Todos os comandos do bot
 	switch cmd {
-	case "/expense", "/e", "/compra":
+	case "/compra":
 		exp, err := s.createExpense(msg)
 		if err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Despesa de R$ %.2f registrada.", exp.TotalValue), nil
-	case "/person", "/p", "/pessoa":
+	case "/pessoa":
 		p, err := s.createPerson(msg)
 		if err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("%s registrado(a).", p.Name), nil
-	case "/card", "/c", "/cartão", "/cartao":
+	case "/cartao":
 		c, err := s.createCard(msg)
 		if err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("%s registrado(a).", c.Name), nil
-	case "/delete", "/d":
-	case "/help", "/h":
+	case "/listar":
+		l, err := s.list(msg)
+		if err != nil {
+			return "", err
+		}
+		return l, nil
+	case "/apagar":
+	case "/atualizar":
+		err := s.update(msg)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Atualizado com sucesso"), nil
+	case "/help":
 		return s.listCmds(), nil
 	default:
-		return "Comando inexistente. Para listagem digite /help|h", nil
+		return "Comando inexistente. Para listagem digite /help", nil
 	}
 
+	// Apenas para o compilador não reclamar
 	return "", nil
 }
 
+// ----------------------------------------------------------------------------
+// - Funções de atualização
+// ----------------------------------------------------------------------------
+
+func (s *BotService) update(msg string) error {
+	tokens := strings.SplitN(strings.TrimSpace(msg), " ", 2)
+	if len(tokens) < 2 {
+		return errors.New("formato inválido.")
+	}
+
+	switch tokens[0] {
+	case "p":
+		err := s.updatePerson(tokens[1])
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("Sub comando inválido. Tente p, c ou e;")
+	}
+
+	return nil
+}
+
+func (s *BotService) updatePerson(msg string) error {
+	tokens := strings.SplitN(msg, " ", 2)
+	if len(tokens) != 2 {
+		return errors.New("formato inválido. Use: [id] [novo_nome]")
+	}
+
+	idUpd, err := strconv.ParseUint(tokens[0], 10, 64)
+	if err != nil {
+		return err
+	}
+	new_name := tokens[1]
+	pUpd := &domain.Person{
+		Id:   uint(idUpd),
+		Name: new_name,
+	}
+
+	if err = s.personRepo.Update(pUpd); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ----------------------------------------------------------------------------
+// - Funções de exclusão/desativação
+// ----------------------------------------------------------------------------
 func (s *BotService) delete(msg string) error {
 	tokens := strings.Split(strings.TrimSpace(msg), " ")
 
 	if len(tokens) != 2 {
-		return errors.New("Use: [subcomando] [nome]")
+		return errors.New("Use: [subcomando] [id]")
 	}
 
 	switch tokens[0] {
@@ -125,6 +187,60 @@ func (s *BotService) deleteExpense(e string) error {
 	return nil
 }
 
+// ----------------------------------------------------------------------------
+// - Funções de ativação
+// ----------------------------------------------------------------------------
+
+
+// ----------------------------------------------------------------------------
+// - Funções de listagem
+// ----------------------------------------------------------------------------
+
+func (s *BotService) list(msg string) (string, error) {
+	token := strings.TrimSpace(msg)
+
+	switch token {
+	case "p":
+		p, err := s.listPerson()
+		if err != nil {
+			return "", err
+		}
+		return p, nil
+	// case "c":
+	// case "e":
+	default:
+		return "", errors.New("subcomando inexistente. Tente p, c ou e")
+	}
+
+	// return "", nil
+}
+
+func (s *BotService) listPerson() (string, error) {
+	persons, err := s.personRepo.GetAll()
+	if err != nil {
+		return "", fmt.Errorf("falha ao buscar pessoas: %w", err)
+	}
+
+	if len(persons) == 0 {
+		return "Nenhuma pessoa encontrada no momento.", nil
+	}
+
+	var sb strings.Builder
+	if _, err := sb.WriteString("Pessoas ativas:\n\n"); err != nil {
+		return "", fmt.Errorf("falha de inclusão de texto: %w", err)
+	}
+
+	for _, p := range persons {
+		line := fmt.Sprintf("#%d - %s\n", p.Id, p.Name)
+		if _, err = sb.WriteString(line); err != nil {
+			return "", fmt.Errorf("falha de inclusão de texto: %w", err)
+		}
+	}
+
+	return sb.String(), nil
+}
+
+// Melhorar
 func (s *BotService) listCmds() string {
 	return `*Comandos disponíveis:*
 	- Nova despesa
@@ -140,6 +256,10 @@ func (s *BotService) listCmds() string {
 	/delete | /d [id]
 	`
 }
+
+// ----------------------------------------------------------------------------
+// - Funções de criação
+// ----------------------------------------------------------------------------
 
 func (s *BotService) createPerson(msg string) (*domain.Person, error) {
 	msg = strings.TrimSpace(msg)
