@@ -1,15 +1,15 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
+
+	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // InitDB inicializa a conexão com o banco de dados, criando-o em dbPath.
-// Cria todas as tabelas definidas na modelagem.
-// Retorna um ponteiro para o bd criado e possíveis erros.
+// Retorna um ponteiro para o bd criado e erros de abertura, conexão ou criaçã do banco de dados.
 func InitDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -28,7 +28,7 @@ func InitDB(dbPath string) (*sql.DB, error) {
 }
 
 // createTables cria todas as tabelas de entidades definidas na modelagem
-// Retorna possível erro.
+// Retorna erro em caso de falha de execução.
 func createTables(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS persons (

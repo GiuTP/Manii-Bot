@@ -1,29 +1,34 @@
 package repository
 
 import (
-	"database/sql"
-	"gfinancer/internal/domain"
 	"strings"
+
+	"database/sql"
+
+	"gfinancer/internal/domain"
 )
 
-// PersonRepo é a estrutura que guarda o ponteiro da conexão com o banco de dados da tabela "person"
+// PersonRepo gerencia a persistência e operações de banco de dados para a entidade de pessoas.
 type PersonRepo struct {
 	db *sql.DB
 }
 
-// NewPersonRepo é a função construtora de PersonRepo
+// NewPersonRepo cria e retorna uma nova instância de PersonRepo utilizando a conexão de banco de dados fornecida.
 func NewPersonRepo(db *sql.DB) *PersonRepo {
 	return &PersonRepo{db: db}
 }
 
+// Create insere uma nova pessoa no banco de dados utilizando os dados da estrutura fornecida.
+// A função define automaticamente a pessoa como ativa (1) e atualiza a estrutura original com o ID gerado.
+// Retorna um erro em caso de falha na inserção ou na recuperação do último ID inserido.
 func (r *PersonRepo) Create(person *domain.Person) error {
-	queryPerson := `
+	query := `
 		INSERT INTO persons(name, active)
 		VALUES (?, 1)
 	`
 
 	res, err := r.db.Exec(
-		queryPerson,
+		query,
 		person.Name,
 	)
 	if err != nil {
@@ -39,13 +44,12 @@ func (r *PersonRepo) Create(person *domain.Person) error {
 	return nil
 }
 
-// ReadMap carrega todos as pessoas salvas no banco de dados.
-// Retorna um map de "person" e possíveis erros
+// ReadMap busca todas as pessoas ativas cadastradas e as retorna indexadas em um mapa.
+// A chave do mapa é o nome da pessoa em letras minúsculas.
+// Retorna o mapa populado em caso de sucesso, ou um erro se a consulta ao banco falhar.
 func (r *PersonRepo) ReadMap() (map[string]domain.Person, error) {
-	// Query SQL para pegar os id das pessoas inseridas no bd
-	query := `SELECT id, name FROM persons`
+	query := `SELECT id, name FROM persons WHERE active = 1`
 
-	// Executa a query e devolve as linhas existentes em "person"
 	rows, err := r.db.Query(query)
 	if err != nil || rows.Err() != nil {
 		return nil, err
@@ -55,7 +59,6 @@ func (r *PersonRepo) ReadMap() (map[string]domain.Person, error) {
 
 	personsMap := make(map[string]domain.Person)
 
-	// Carrega todos os nomes e ids de "person" no mapa de pessoas
 	for rows.Next() {
 		var p domain.Person
 
@@ -64,15 +67,53 @@ func (r *PersonRepo) ReadMap() (map[string]domain.Person, error) {
 			return nil, err
 		}
 
-		k := strings.ToLower(p.Name)
-		personsMap[k] = p
+		personsMap[strings.ToLower(p.Name)] = p
 	}
 
 	return personsMap, nil
 }
 
-//func (r *PersonRepo) GetAll() ([]domain.Person, error){}
+// GetAll busca todas as pessoas ativas no banco de dados ordenadas alfabeticamente pelo nome.
+// Retorna um slice com as pessoas encontradas, ou um erro se a consulta falhar.
+func (r *PersonRepo) GetAll() ([]domain.Person, error) {
+	query := `
+		SELECT id, name
+		FROM persons
+		WHERE active = 1
+		ORDER BY name
+	`
 
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var persons []domain.Person
+	for rows.Next() {
+		var p domain.Person
+
+		err = rows.Scan(
+			&p.Id,
+			&p.Name,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		persons = append(persons, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return persons, nil
+}
+
+// Update atualiza o nome de uma pessoa existente no banco de dados com base no seu ID.
+// Retorna sql.ErrNoRows caso nenhuma pessoa seja afetada (ID inexistente), ou outro erro em caso de falha na execução.
 func (r *PersonRepo) Update(person *domain.Person) error {
 	query := `
 		UPDATE persons
@@ -100,6 +141,8 @@ func (r *PersonRepo) Update(person *domain.Person) error {
 	return nil
 }
 
+// Disable inativa uma pessoa, alterando seu status para inativo (0) no banco de dados com base no ID.
+// Retorna sql.ErrNoRows caso a pessoa não seja encontrada, ou um erro se a execução falhar.
 func (r *PersonRepo) Disable(id uint) error {
 	query := `
 		UPDATE persons SET active = ? WHERE id = ?
@@ -120,6 +163,8 @@ func (r *PersonRepo) Disable(id uint) error {
 	return nil
 }
 
+// Enable reativa uma pessoa previamente inativada, restaurando seu status para ativo (1) no banco de dados.
+// Retorna sql.ErrNoRows caso a pessoa não seja encontrada, ou um erro se a execução falhar.
 func (r *PersonRepo) Enable(id uint) error {
 	query := `
 		UPDATE persons SET active = ? WHERE id = ?

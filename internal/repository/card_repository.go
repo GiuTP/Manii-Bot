@@ -12,6 +12,7 @@ import (
 // ** CRUD de repositório card
 // *****************************
 
+// CardRepo gerencia a persistência e operações de banco de dados para a entidade de cartões
 type CardRepo struct {
 	db *sql.DB
 }
@@ -79,7 +80,7 @@ func (r *CardRepo) ReadMap() (map[string]domain.Card, error) {
 }
 
 // GetAll busca todos os cartões ativos cadastrados no banco de dados ordenados pelo nome.
-// Retorna um sliced com todas os cartõtes encontradas, ou um erro se a consulta falhar.
+// Retorna um slice com todas os cartõtes encontradas, ou um erro se a consulta falhar.
 func (r *CardRepo) GetAll() ([]domain.Card, error) {
 	query := `
 		SELECT id, name, type, closing_day, due_day 
