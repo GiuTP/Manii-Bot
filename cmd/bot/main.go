@@ -29,7 +29,7 @@ func main() {
 	defer db.Close()
 
 	expRepo := repository.NewExpenseRepo(db)
-	cardExp := repository.NewCard(db)
+	cardExp := repository.NewCardRepo(db)
 	persExp := repository.NewPersonRepo(db)
 
 	botService := services.NewBotService(expRepo, cardExp, persExp)
