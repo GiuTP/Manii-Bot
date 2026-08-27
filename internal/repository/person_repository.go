@@ -77,9 +77,8 @@ func (r *PersonRepo) ReadMap() (map[string]domain.Person, error) {
 // Retorna um slice com as pessoas encontradas, ou um erro se a consulta falhar.
 func (r *PersonRepo) GetAll() ([]domain.Person, error) {
 	query := `
-		SELECT id, name
+		SELECT id, name, active
 		FROM persons
-		WHERE active = 1
 		ORDER BY name
 	`
 
@@ -97,6 +96,7 @@ func (r *PersonRepo) GetAll() ([]domain.Person, error) {
 		err = rows.Scan(
 			&p.Id,
 			&p.Name,
+			&p.Active,
 		)
 		if err != nil {
 			return nil, err
