@@ -72,15 +72,14 @@ func (r *CardRepo) ReadMap() (map[string]domain.Card, error) {
 		if err != nil {
 			return nil, err
 		}
-		key := strings.ToLower(c.Name)
-		cardsMap[key] = c
+		cardsMap[strings.ToLower(c.Name)] = c
 	}
 
 	return cardsMap, nil
 }
 
 // GetAll busca todos os cartões ativos cadastrados no banco de dados ordenados pelo nome.
-// Retorna um slice com todas os cartõtes encontradas, ou um erro se a consulta falhar.
+// Retorna um sliced com todas os cartõtes encontradas, ou um erro se a consulta falhar.
 func (r *CardRepo) GetAll() ([]domain.Card, error) {
 	query := `
 		SELECT id, name, type, closing_day, due_day 
