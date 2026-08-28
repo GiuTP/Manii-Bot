@@ -2,12 +2,7 @@ package services
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
-
-	"gfinancer/internal/domain"
-	"gfinancer/internal/parser"
 )
 
 type BotService struct {
@@ -24,146 +19,132 @@ func NewBotService(e *ExpenseService, c *CardService, p *PersonService) *BotServ
 	}
 }
 
-func (s *BotService) HandleMessage(rawMsg string) (string, error) {
+func (s *BotService) HandleMessage(rawMsg string) string {
 	tokens := strings.SplitN(rawMsg, " ", 2)
 	if len(tokens) < 1 {
-		return "", errors.New("Comando vazio. Tente /help")
+		return "Comando vazio."
 	}
+
 	cmd := tokens[0]
-	msg := tokens[1]
+	msg := ""
+	if len(tokens) == 2 {
+		msg = strings.TrimSpace(tokens[1])
+	}
+
+	var resp string
+	var err error
 
 	// Todos os comandos do bot
 	switch cmd {
+
+	// Criação
 	case "/compra":
-		exp, err := s.createExpense(msg)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("Despesa de R$ %.2f registrada.", exp.TotalValue), nil
+		resp, err = s.eSvc.Create(msg)
 	case "/pessoa":
-		p, err := s.createPerson(msg)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("%s registrado(a).", p.Name), nil
+		resp, err = s.pSvc.Create(msg)
 	case "/cartao":
-		c, err := s.createCard(msg)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("%s registrado(a).", c.Name), nil
+		resp, err = s.cSvc.Create(msg)
+
+	// Listagem
 	case "/listar":
-		l, err := s.list(msg)
-		if err != nil {
-			return "", err
-		}
-		return l, nil
-	case "/apagar":
+		resp, err = s.list(msg)
+
+	//Atualização
 	case "/atualizar":
-		err := s.update(msg)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("Atualizado com sucesso"), nil
+		resp, err = s.update(msg)
+
+	// Exclusão
+	case "/apagar":
+		resp, err = s.delete(msg)
+
+	// Reativação
+	case "/ativar":
+
+	// Help
 	case "/help":
-		return s.listCmds(), nil
+
 	default:
-		return "Comando inexistente. Para listagem digite /help", nil
+		return "Comando inexistente. Para listagem digite /help"
 	}
 
-	// Apenas para o compilador não reclamar
-	return "", nil
+	if err != nil {
+		return "(Falha) " + err.Error()
+	}
+
+	return "(Sucesso) " + resp
 }
 
-// ----------------------------------------------------------------------------
-// - Funções de atualização
-// ----------------------------------------------------------------------------
+func (s *BotService) update(msg string) (string, error) {
+	if msg = strings.TrimSpace(msg); msg == "" {
+		return "", errors.New("Especifique qual entidade atualizar. Use: p, c ou e")
+	}
 
-func (s *BotService) update(msg string) error {
-	tokens := strings.SplitN(strings.TrimSpace(msg), " ", 2)
+	tokens := strings.SplitN(msg, " ", 2)
 	if len(tokens) < 2 {
-		return errors.New("formato inválido.")
+		return "", errors.New("Use: [entidade] [id/nome] [novos_valores]")
 	}
 
-	switch tokens[0] {
+	cmd := strings.ToLower(tokens[0])
+	upd := strings.TrimSpace(tokens[1])
+
+	switch cmd {
 	case "p":
-		err := s.updatePerson(tokens[1])
-		if err != nil {
-			return err
-		}
-	default:
-		return errors.New("Sub comando inválido. Tente p, c ou e;")
-	}
-
-	return nil
-}
-
-// ----------------------------------------------------------------------------
-// - Funções de exclusão/desativação
-// ----------------------------------------------------------------------------
-func (s *BotService) delete(msg string) error {
-	tokens := strings.Split(strings.TrimSpace(msg), " ")
-
-	if len(tokens) != 2 {
-		return errors.New("Use: [subcomando] [id]")
-	}
-
-	switch tokens[0] {
-	case "p":
-		return s.disablePerson(tokens[1])
+		return s.pSvc.Update(upd)
 	case "c":
-		return s.disableCard(tokens[1])
+		return s.cSvc.Update(upd)
 	case "e":
-		return s.deleteExpense(tokens[1])
+		return s.eSvc.Update(upd)
 	default:
-		return errors.New("subcomando não existe. Tente p, c ou e")
+		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
 	}
 }
 
-func (s *BotService) disableCard(c string) error {
-	cMap, err := s.cardRepo.ReadMap()
-	if err != nil {
-		return err
-	}
-	dCard, exist := cMap[c]
-	if !exist {
-		return errors.New("cartão não existe")
-	}
-	if err = s.cardRepo.Disable(dCard.Id); err != nil {
-		return err
+func (s *BotService) delete(msg string) (string, error) {
+	if msg = strings.TrimSpace(msg); msg == "" {
+		return "", errors.New("Especifique qual entidade apagar/desativar. Use: p, c ou e")
 	}
 
-	return nil
-}
+	tokens := strings.SplitN(msg, " ", 2)
+	if len(tokens) < 2 {
+		return "", errors.New("Use: [entidade] [id/nome]")
+	}
+	cmd := strings.ToLower(tokens[0])
+	del := strings.TrimSpace(tokens[1])
 
-func (s *BotService) deleteExpense(e string) error {
-	eId, err := strconv.Atoi(e)
-	if err != nil {
-		return errors.New("valor precisa ser um número")
+	switch cmd {
+	case "p":
+		return s.pSvc.Disable(del)
+	case "c":
+		return s.cSvc.Disable(del)
+	case "e":
+		return s.eSvc.Delete(del)
+	default:
+		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
 	}
-	if err = s.expenseRepo.Delete(uint(eId)); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *BotService) list(msg string) (string, error) {
-	token := strings.TrimSpace(msg)
-
-	switch token {
-	case "p":
-		p, err := s.listPerson()
-		if err != nil {
-			return "", err
-		}
-		return p, nil
-	// case "c":
-	// case "e":
-	default:
-		return "", errors.New("subcomando inexistente. Tente p, c ou e")
+	if msg = strings.TrimSpace(msg); msg == "" {
+		return "", errors.New("Especifique qual entidade listar. Use: p, c ou e")
 	}
 
-	// return "", nil
+	tokens := strings.SplitN(msg, " ", 2)
+	cmd := strings.ToLower(tokens[0])
+	flag := ""
+	if len(tokens) == 2 {
+		flag = strings.ToLower(strings.TrimSpace(tokens[1]))
+	}
+
+	switch cmd {
+	case "p":
+		return s.pSvc.List(flag)
+	case "c":
+		return s.cSvc.List(flag)
+	case "e":
+		return s.eSvc.List(flag)
+	default:
+		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
+	}
 }
 
 // Melhorar
@@ -181,82 +162,4 @@ func (s *BotService) listCmds() string {
 	- Deletar (BREVE)
 	/delete | /d [id]
 	`
-}
-
-func (s *BotService) createCard(msg string) (*domain.Card, error) {
-	// Validação de formato
-	tokens := strings.Split(strings.TrimSpace(msg), " ")
-	if len(tokens) != 4 {
-		return nil, errors.New("Use: [Nome] [Tipo] [Dia Fechamento] [Dia Vencimento]")
-	}
-
-	name := tokens[0]
-
-	// Validação de tipo do cartão
-	var typ uint8
-	switch tokens[1] {
-	case "crédito", "credito":
-		typ = 0
-	case "débito", "debito":
-		typ = 1
-	default:
-		return nil, errors.New("tipo do cartão inválido")
-	}
-
-	closingD, err := strconv.Atoi(tokens[2])
-	if err != nil {
-		return nil, errors.New("dia de fechamento deve ser um número")
-	}
-	dueD, err := strconv.Atoi(tokens[3])
-	if err != nil {
-		return nil, errors.New("dia de vencimento deve ser um número")
-	}
-
-	newC := &domain.Card{
-		Name:       name,
-		Type:       typ,
-		ClosingDay: uint8(closingD),
-		DueDay:     uint8(dueD),
-	}
-	err = s.cardRepo.Create(newC)
-	if err != nil {
-		return nil, err
-	}
-
-	return newC, nil
-}
-
-func (s *BotService) createExpense(message string) (*domain.Expense, error) {
-	personsMap, err := s.personRepo.ReadMap()
-	if err != nil {
-		return nil, errors.New("erro ao carregar pessoas do banco: " + err.Error())
-	}
-
-	cardsMap, err := s.cardRepo.ReadMap()
-	if err != nil {
-		return nil, errors.New("erro ao carregar cartões do banco: " + err.Error())
-	}
-
-	expense, err := parser.ExpenseParser(message, personsMap, cardsMap)
-	if err != nil {
-		return nil, errors.New("erro ao processar texto: " + err.Error())
-	}
-
-	var selectedCard *domain.Card
-	if expense.CardId != nil {
-		for _, c := range cardsMap {
-			if c.Id == *expense.CardId {
-				cardCopy := c
-				selectedCard = &cardCopy
-				break
-			}
-		}
-	}
-
-	err = s.expenseRepo.Save(expense, selectedCard)
-	if err != nil {
-		return nil, errors.New("erro ao salvar no banco de dados: " + err.Error())
-	}
-
-	return expense, nil
 }
