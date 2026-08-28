@@ -8,20 +8,19 @@ import (
 
 	"gfinancer/internal/domain"
 	"gfinancer/internal/parser"
-	"gfinancer/internal/repository"
 )
 
 type BotService struct {
-	expenseRepo *repository.ExpenseRepo
-	cardRepo    *repository.CardRepo
-	personRepo  *repository.PersonRepo
+	eSvc *ExpenseService
+	cSvc *CardService
+	pSvc *PersonService
 }
 
-func NewBotService(e *repository.ExpenseRepo, c *repository.CardRepo, p *repository.PersonRepo) *BotService {
+func NewBotService(e *ExpenseService, c *CardService, p *PersonService) *BotService {
 	return &BotService{
-		expenseRepo: e,
-		cardRepo:    c,
-		personRepo:  p,
+		eSvc: e,
+		cSvc: c,
+		pSvc: p,
 	}
 }
 
@@ -148,14 +147,6 @@ func (s *BotService) deleteExpense(e string) error {
 	return nil
 }
 
-// ----------------------------------------------------------------------------
-// - Funções de ativação
-// ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
-// - Funções de listagem
-// ----------------------------------------------------------------------------
-
 func (s *BotService) list(msg string) (string, error) {
 	token := strings.TrimSpace(msg)
 
@@ -191,10 +182,6 @@ func (s *BotService) listCmds() string {
 	/delete | /d [id]
 	`
 }
-
-// ----------------------------------------------------------------------------
-// - Funções de criação
-// ----------------------------------------------------------------------------
 
 func (s *BotService) createCard(msg string) (*domain.Card, error) {
 	// Validação de formato
