@@ -74,7 +74,7 @@ func TestExpenseParser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expense, err := ExpenseParser(tt.input, mockPeople, mockCards)
+			expense, _, err := ExpenseParser(tt.input, mockPeople, mockCards)
 
 			if tt.waitError {
 				if err == nil {
