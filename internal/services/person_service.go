@@ -110,6 +110,9 @@ func (s *PersonService) Update(msg string) (string, error) {
 	person.Name = tokens[1]
 
 	if err = s.repo.Update(&person); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", errors.New("Nome não encontrado. Use /lista p")
+		}
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 

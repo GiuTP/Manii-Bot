@@ -158,6 +158,9 @@ func (s *CardService) Update(msg string) (string, error) {
 	}
 
 	if err = s.repo.Update(&card); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", errors.New("Nome não encontrado. Use /lista c")
+		}
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 
