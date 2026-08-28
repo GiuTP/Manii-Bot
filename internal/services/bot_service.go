@@ -99,29 +99,6 @@ func (s *BotService) update(msg string) error {
 	return nil
 }
 
-func (s *BotService) updatePerson(msg string) error {
-	tokens := strings.SplitN(msg, " ", 2)
-	if len(tokens) != 2 {
-		return errors.New("formato inválido. Use: [id] [novo_nome]")
-	}
-
-	idUpd, err := strconv.ParseUint(tokens[0], 10, 64)
-	if err != nil {
-		return err
-	}
-	new_name := tokens[1]
-	pUpd := &domain.Person{
-		Id:   uint(idUpd),
-		Name: new_name,
-	}
-
-	if err = s.personRepo.Update(pUpd); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ----------------------------------------------------------------------------
 // - Funções de exclusão/desativação
 // ----------------------------------------------------------------------------
@@ -142,22 +119,6 @@ func (s *BotService) delete(msg string) error {
 	default:
 		return errors.New("subcomando não existe. Tente p, c ou e")
 	}
-}
-
-func (s *BotService) disablePerson(p string) error {
-	pMap, err := s.personRepo.ReadMap()
-	if err != nil {
-		return err
-	}
-	dPerson, exist := pMap[p]
-	if !exist {
-		return errors.New("pessoa não existe")
-	}
-	if err = s.personRepo.Disable(dPerson.Id); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *BotService) disableCard(c string) error {
@@ -191,7 +152,6 @@ func (s *BotService) deleteExpense(e string) error {
 // - Funções de ativação
 // ----------------------------------------------------------------------------
 
-
 // ----------------------------------------------------------------------------
 // - Funções de listagem
 // ----------------------------------------------------------------------------
@@ -215,31 +175,6 @@ func (s *BotService) list(msg string) (string, error) {
 	// return "", nil
 }
 
-func (s *BotService) listPerson() (string, error) {
-	persons, err := s.personRepo.GetAll()
-	if err != nil {
-		return "", fmt.Errorf("falha ao buscar pessoas: %w", err)
-	}
-
-	if len(persons) == 0 {
-		return "Nenhuma pessoa encontrada no momento.", nil
-	}
-
-	var sb strings.Builder
-	if _, err := sb.WriteString("Pessoas ativas:\n\n"); err != nil {
-		return "", fmt.Errorf("falha de inclusão de texto: %w", err)
-	}
-
-	for _, p := range persons {
-		line := fmt.Sprintf("#%d - %s\n", p.Id, p.Name)
-		if _, err = sb.WriteString(line); err != nil {
-			return "", fmt.Errorf("falha de inclusão de texto: %w", err)
-		}
-	}
-
-	return sb.String(), nil
-}
-
 // Melhorar
 func (s *BotService) listCmds() string {
 	return `*Comandos disponíveis:*
@@ -260,35 +195,6 @@ func (s *BotService) listCmds() string {
 // ----------------------------------------------------------------------------
 // - Funções de criação
 // ----------------------------------------------------------------------------
-
-func (s *BotService) createPerson(msg string) (*domain.Person, error) {
-	msg = strings.TrimSpace(msg)
-
-	// Validação de ter apenas uma palavra "msg"
-	if len(strings.Split(msg, " ")) > 1 {
-		return nil, errors.New("informe apenas o nome de alguém.")
-	}
-
-	// Validação de duplicação
-	pMap, err := s.personRepo.ReadMap()
-	if err != nil {
-		return nil, err
-	}
-	_, exist := pMap[msg]
-	if exist {
-		return nil, errors.New("pessoa digitada já existe")
-	}
-
-	newP := &domain.Person{
-		Name: msg,
-	}
-	err = s.personRepo.Create(newP)
-	if err != nil {
-		return nil, err
-	}
-
-	return newP, nil
-}
 
 func (s *BotService) createCard(msg string) (*domain.Card, error) {
 	// Validação de formato
