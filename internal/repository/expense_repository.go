@@ -87,15 +87,30 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 	return nil
 }
 
-// GetAll busca todas as despesas cadastradas no banco de dados ordenadas pela data de compra mais recente para a mais antiga.
-// Retorna um sliced com todas as despesas encontradas, ou um erro se a consulta falhar.
-func (r *ExpenseRepo) GetAll() ([]domain.Expense, error) {
+// Get busca todas as despesas cadastradas no banco de dados ordenadas pela data de compra mais recente para a mais antiga.
+// Retorna um slice com todas as despesas encontradas, ou um erro se a consulta falhar.
+func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, error) {
 	query := `
 		SELECT id, description, total_value, total_installments, purchase_date, person_id, card_id
 		FROM expenses
-		ORDER BY purchase_Date DESC
+		WHERE strftime('%m', purchase_date) = ? AND strftime('%Y', purchase_date) = ?
 	`
-	rows, err := r.db.Query(query)
+
+	args := []any{m, y}
+
+	if pId != 0 {
+		query += ` AND person_id = ?`
+		args = append(args, pId)
+	}
+
+	if cId != 0 {
+		query += ` AND card_id = ?`
+		args = append(args, cId)
+	}
+
+	query += ` ORDER BY date purchase_date`
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,19 +143,18 @@ func (r *ExpenseRepo) GetAll() ([]domain.Expense, error) {
 	return expenses, nil
 }
 
-// Update atualiza os metadados de uma despesa existente (descrição e pessoa associada) com base no seu ID.
+// Update atualiza a descrição de uma despesa existente com base no seu ID.
 // Retorna sql.ErrNoRows se despesa não existir, ou outro erro em caso de falha na execução.
 func (r *ExpenseRepo) Update(expense *domain.Expense) error {
 	query := `
 		UPDATE expenses
-		SET description = ?, person_id = ?
+		SET description = ?
 		WHERE id = ?
 	`
 
 	res, err := r.db.Exec(
 		query,
 		expense.Description,
-		expense.PersonId,
 		expense.Id,
 	)
 	if err != nil {
@@ -169,7 +183,7 @@ func (r *ExpenseRepo) Delete(id uint) error {
 	defer tx.Rollback()
 
 	// Apaga de installments
-	queryDeleteInstallments := `DELELE FROM installments WHERE expense_id = ?`
+	queryDeleteInstallments := `DELETE FROM installments WHERE expense_id = ?`
 	_, err = tx.Exec(queryDeleteInstallments, id)
 	if err != nil {
 		return err
