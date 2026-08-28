@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"database/sql"
@@ -30,7 +29,7 @@ func (s *PersonService) Create(msg string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Falha ao ler o mapa de pessoas: %w", err)
 	}
-
+	// Futuramente vou dá suporte a nome repetido usando chave composta.
 	if _, exists := pMap[strings.ToLower(name)]; exists {
 		return "", errors.New("Pessoa digitada já existe")
 	}
@@ -95,64 +94,76 @@ func (s *PersonService) List(msg string) (string, error) {
 func (s *PersonService) Update(msg string) (string, error) {
 	tokens := strings.SplitN(msg, " ", 2)
 	if len(tokens) != 2 {
-		return "", errors.New("Use: [id] [novo_nome]")
+		return "", errors.New("Use: [nome_atual] [novo_nome]")
 	}
 
-	id, err := strconv.ParseUint(tokens[0], 10, 64)
+	pMap, err := s.repo.ReadMap()
 	if err != nil {
-		return "", fmt.Errorf("Erro de conversão: %w", err)
+		return "", fmt.Errorf("Falha ao carregar o mapa: %w", err)
 	}
 
-	pUpd := &domain.Person{
-		Id:   uint(id),
-		Name: tokens[1],
+	person, exists := pMap[strings.ToLower(tokens[0])]
+	if !exists {
+		return "", errors.New("Pessoa não encontrada. Use /lista p ativos")
 	}
 
-	if err = s.repo.Update(pUpd); err != nil {
+	person.Name = tokens[1]
+
+	if err = s.repo.Update(&person); err != nil {
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 
-	return fmt.Sprintf("Pessoa (ID %d) atualizada com sucesso!", pUpd.Id), nil
+	return fmt.Sprintf("Pessoa (ID %d) atualizada com sucesso!", person.Id), nil
 }
 
 func (s *PersonService) Disable(msg string) (string, error) {
-	idT := strings.Split(strings.TrimSpace(msg), " ")
-	if len(idT) != 1 {
-		return "", errors.New("Use: [id]")
+	name := strings.Split(strings.TrimSpace(msg), " ")
+	if len(name) != 1 {
+		return "", errors.New("Use: [nome]")
 	}
 
-	id, err := strconv.ParseUint(idT[0], 10, 64)
+	pMap, err := s.repo.ReadMap()
 	if err != nil {
-		return "", fmt.Errorf("Erro de conversão: %w", err)
+		return "", fmt.Errorf("Falha ao carregar o mapa: %w", err)
 	}
 
-	if err = s.repo.Disable(uint(id)); err != nil {
+	p, exists := pMap[strings.ToLower(name[0])]
+	if !exists {
+		return "", errors.New("Nome não encontrado. Use: /lista p inativos")
+	}
+
+	if err = s.repo.Disable(p.Id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New("ID não encontrado ou já desativado. Utilize: /lista p inativos")
+			return "", errors.New("Nome não encontrado ou já desativado. Use: /lista p inativos")
 		}
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 
-	return fmt.Sprintf("Pessoa (ID %d) desativado(a) com sucesso!", id), nil
+	return fmt.Sprintf("%s (ID %d) desativado(a) com sucesso!", p.Name, p.Id), nil
 }
 
 func (s *PersonService) Enable(msg string) (string, error) {
-	idT := strings.Split(strings.TrimSpace(msg), " ")
-	if len(idT) != 1 {
-		return "", errors.New("Use: [id]")
+	name := strings.Split(strings.TrimSpace(msg), " ")
+	if len(name) != 1 {
+		return "", errors.New("Use: [nome]")
 	}
 
-	id, err := strconv.ParseUint(idT[0], 10, 64)
+	pMap, err := s.repo.ReadMap()
 	if err != nil {
-		return "", fmt.Errorf("Erro de conversão: %w", err)
+		return "", fmt.Errorf("Falha ao carregar o mapa: %w", err)
 	}
 
-	if err = s.repo.Enable(uint(id)); err != nil {
+	p, exists := pMap[strings.ToLower(name[0])]
+	if !exists {
+		return "", errors.New("Nome não encontrado. Use: /lista p ativos")
+	}
+
+	if err = s.repo.Enable(p.Id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New("ID não encontrado ou já ativo. Utilize: /lista p ativos")
+			return "", errors.New("Nome não encontrado ou já desativado. Use: /lista p ativos")
 		}
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 
-	return fmt.Sprintf("Pessoa (ID %d) ativado(a) com sucesso!", id), nil
+	return fmt.Sprintf("%s (ID %d) reativado(a) com sucesso!", p.Name, p.Id), nil
 }
