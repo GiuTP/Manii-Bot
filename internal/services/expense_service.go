@@ -157,7 +157,7 @@ func (s *ExpenseService) Update(msg string) (string, error) {
 		return "", fmt.Errorf("Falha ao atualizar o banco de dados: %w", err)
 	}
 
-	return "Descrição atualizada com suceso!", nil
+	return "Descrição atualizada com sucesso!", nil
 }
 
 func (s *ExpenseService) Delete(msg string) (string, error) {
