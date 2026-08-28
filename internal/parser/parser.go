@@ -14,12 +14,12 @@ import (
 // com base nos mapas fornecidos, unindo o restante das palavras como descrição.
 // Retorna a despesa preenchida em caso de sucesso, ou um erro se o texto
 // for inválido ou não contiver um valor numérico.
-func ExpenseParser(input string, people map[string]domain.Person, cards map[string]domain.Card) (*domain.Expense, error) {
+func ExpenseParser(input string, people map[string]domain.Person, cards map[string]domain.Card) (*domain.Expense, *domain.Card, error) {
 	input = strings.TrimSpace(input)
 
 	// Input vazio é inválido
 	if input == "" {
-		return nil, errors.New("input vazio")
+		return nil, nil, errors.New("input vazio")
 	}
 
 	// Cria os tokens a partir de input
@@ -28,7 +28,7 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 	// Input abaixo de 2 tokens é inválido
 	// É esperado <valor> <descrição> pelo menos
 	if len(tokens) < 2 {
-		return nil, errors.New("formato inválido, esperado pelo menos descrição e valor da compra.")
+		return nil, nil, errors.New("formato inválido, esperado pelo menos descrição e valor da compra.")
 	}
 
 	// Numéro de parcelas é 1 por padrão
@@ -43,7 +43,8 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 	reMoney := regexp.MustCompile(`^\d+[.,]\d{2}$`)
 
 	var descTokens []string
-	var valueFound bool
+	var valueFound, cardFound bool
+	var cCopy domain.Card
 
 	// Varre os tokens restantes
 	// Procura por: parcelamento, pessoa, cartão e descrição
@@ -62,7 +63,10 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 
 		// Parcelamento
 		if match := reInstallment.FindStringSubmatch(tokenLower); match != nil {
-			installments, _ := strconv.Atoi(match[1])
+			installments, err := strconv.ParseUint(match[1], 10, 8)
+			if err != nil || installments < 1 {
+				return nil, nil, errors.New("Parcelamento inválido. Mínimo 1 e máximo 255.")
+			}
 			expense.TotalInstallments = uint8(installments)
 			continue
 		}
@@ -76,8 +80,9 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 
 		// Cartão
 		if c, existe := cards[tokenLower]; existe {
-			cCopy := c
+			cCopy = c
 			expense.CardId = &cCopy.Id
+			cardFound = true
 			continue
 		}
 
@@ -88,14 +93,19 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 	// Valor não encontrado
 	// Caso de uso: compra grátis.
 	if !valueFound {
-		return nil, errors.New("valor não encontrado. Valor deve conter casas decimais, mesmo que '.00'")
+		return nil, nil, errors.New("valor não encontrado. Valor deve conter casas decimais, mesmo que '.00'")
 	}
 
 	// Une tokens de descrição para casos onde contém mais de uma string (mais comum)
 	expense.Description = strings.Join(descTokens, " ")
 	if expense.Description == "" {
-		return nil, errors.New("a descrição não pode ser vazia")
+		return nil, nil, errors.New("a descrição não pode ser vazia")
 	}
 
-	return expense, nil
+	var selectedCard *domain.Card
+	if cardFound {
+		selectedCard = &cCopy
+	}
+
+	return expense, selectedCard, nil
 }
