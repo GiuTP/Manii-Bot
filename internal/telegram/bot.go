@@ -25,23 +25,20 @@ func NewTelegramBot(token string, service *services.BotService) (*TelegramBot, e
 	}, nil
 }
 
-func (b *TelegramBot) Start(){
+func (b *TelegramBot) Start() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
 	updates := b.api.GetUpdatesChan(u)
 
-	for update := range updates{
-		if update.Message == nil || update.Message.Text == ""{
+	for update := range updates {
+		if update.Message == nil || update.Message.Text == "" {
 			continue
 		}
 
-		resp, err := b.service.HandleMessage(update.Message.Text)
-		if err != nil{
-			resp = "Erro: " + err.Error()
-		}
+		resp := b.service.HandleMessage(update.Message.Text)
 
-		if resp != ""{
+		if resp != "" {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, resp)
 			b.api.Send(msg)
 		}

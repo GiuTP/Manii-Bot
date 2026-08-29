@@ -6,9 +6,35 @@ import (
 	"gfinancer/internal/telegram"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
+
+func loadAdmins() map[int64]bool {
+	adminsStr := os.Getenv("ALLOWED_USERS")
+	if adminsStr == "" {
+		log.Fatal("Nenhum ususário autorizado definido em ALLOWED_USERS")
+	}
+
+	admins := make(map[int64]bool)
+	tokens := strings.Split(adminsStr, ",")
+
+	for _, t := range tokens {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		id, err := strconv.ParseInt(t, 10, 64)
+		if err != nil {
+			log.Fatalf("ID inválido no .env: %s", t)
+		}
+		admins[id] = true
+	}
+
+	return admins
+}
 
 func main() {
 	err := godotenv.Load()
@@ -28,11 +54,15 @@ func main() {
 
 	defer db.Close()
 
-	expRepo := repository.NewExpenseRepo(db)
-	cardExp := repository.NewCardRepo(db)
-	persExp := repository.NewPersonRepo(db)
+	eRepo := repository.NewExpenseRepo(db)
+	cRepo := repository.NewCardRepo(db)
+	pRepo := repository.NewPersonRepo(db)
 
-	botService := services.NewBotService(expRepo, cardExp, persExp)
+	eSvc := services.NewExpenseService(eRepo, pRepo, cRepo)
+	cSvc := services.NewCardService(cRepo)
+	pSvc := services.NewPersonService(pRepo)
+
+	botService := services.NewBotService(eSvc, cSvc, pSvc)
 
 	bot, err := telegram.NewTelegramBot(token, botService)
 	if err != nil {
