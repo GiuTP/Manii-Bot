@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"gfinancer/internal/domain"
 )
@@ -62,7 +63,7 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 	}
 
 	query = `
-		INSERT INTO installments (expense_id, number_installment, value, due_date, payment_status)
+		INSERT INTO installments (expense_id, number_installments, value, due_date, payment_status)
 		VALUES (?, ?, ?, ?, ?)
 	`
 	// Inserção de query SQL em "installments"
@@ -90,25 +91,39 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 // Get busca todas as despesas cadastradas no banco de dados ordenadas pela data de compra mais recente para a mais antiga.
 // Retorna um slice com todas as despesas encontradas, ou um erro se a consulta falhar.
 func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, error) {
+	month := fmt.Sprintf("%02d", m)
+	year := fmt.Sprintf("%04d", y)
+
 	query := `
-		SELECT id, description, total_value, total_installments, purchase_date, person_id, card_id
-		FROM expenses
-		WHERE strftime('%m', purchase_date) = ? AND strftime('%Y', purchase_date) = ?
+		SELECT 
+			e.id,
+			e.description,
+			e.total_value,
+			e.purchase_date,
+			e.total_installments,
+			e.person_id,
+			e.card_id,
+			i.value,
+			i.number_installments,
+			i.due_date
+		FROM installments i
+		INNER JOIN expenses e ON i.expense_id = e.id
+		WHERE strftime('%m', i.due_date) = ? AND strftime('%Y', i.due_date) = ?
 	`
 
-	args := []any{m, y}
+	args := []any{month, year}
 
 	if pId != 0 {
-		query += ` AND person_id = ?`
+		query += ` AND e.person_id = ?`
 		args = append(args, pId)
 	}
 
 	if cId != 0 {
-		query += ` AND card_id = ?`
+		query += ` AND e.card_id = ?`
 		args = append(args, cId)
 	}
 
-	query += ` ORDER BY date purchase_date`
+	query += ` ORDER BY i.due_date ASC`
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -125,10 +140,13 @@ func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, e
 			&e.Id,
 			&e.Description,
 			&e.TotalValue,
-			&e.TotalInstallments,
 			&e.PurchaseDate,
+			&e.TotalInstallments,
 			&e.PersonId,
 			&e.CardId,
+			&e.InstallmentValue,
+			&e.CurrentInstallment,
+			&e.DueDate,
 		)
 		if err != nil {
 			return nil, err
