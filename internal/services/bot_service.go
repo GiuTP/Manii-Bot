@@ -1,6 +1,7 @@
 package services
 
 import (
+	_ "embed"
 	"errors"
 	"strings"
 )
@@ -56,13 +57,17 @@ func (s *BotService) HandleMessage(rawMsg string) string {
 	// Exclusão
 	case "/apagar":
 		resp, err = s.delete(msg)
-
 	// Reativação
 	case "/ativar":
+		resp, err = s.enable(msg)
+	// Desfazer
+	//case "/desfazer":
 
 	// Help
 	case "/help":
+		resp = s.help()
 
+	// Comando incorreto
 	default:
 		return "Comando inexistente. Para listagem digite /help"
 	}
@@ -147,19 +152,31 @@ func (s *BotService) list(msg string) (string, error) {
 	}
 }
 
-// Melhorar
-func (s *BotService) listCmds() string {
-	return `*Comandos disponíveis:*
-	- Nova despesa
-	/expense | /e | /compra [msg]
+func (s *BotService) enable(msg string) (string, error) {
+	if msg = strings.TrimSpace(msg); msg == "" {
+		return "", errors.New("Especifique qual entidade reativar. Use: p ou c")
+	}
 
-	- Nova cessoa
-	/person | /p | /pessoa [nome]
+	tokens := strings.SplitN(msg, " ", 2)
+	if len(tokens) < 2 {
+		return "", errors.New("Use: [entidade] [nome]")
+	}
+	cmd := strings.ToLower(tokens[0])
+	act := strings.TrimSpace(tokens[1])
 
-	- Novo cartão
-	/card | /c | /cartao | /cartão [nome] [tipo] [fech] [venc]
+	switch cmd {
+	case "p":
+		return s.pSvc.Enable(act)
+	case "c":
+		return s.cSvc.Enable(act)
+	default:
+		return "", errors.New("Subcomando inexistente. Use: p ou c")
+	}
+}
 
-	- Deletar (BREVE)
-	/delete | /d [id]
-	`
+//go:embed help.txt
+var textHelp string
+
+func (s *BotService) help() string {
+	return textHelp
 }

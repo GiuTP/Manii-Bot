@@ -1,0 +1,33 @@
+🤖 Guia de Comandos do Bot Financeiro
+
+💸 COMPRAS (Despesas)
+/compra [valor] [descrição] [pessoa] [cartão] [parcelas]
+Cadastra um novo gasto. Só valor e descrição são obrigatórios.
+Ex: /compra 45.90 Ifood joão nubank
+Ex: /compra 120.00 Tênis pedro 3x
+
+👥 PESSOAS & 💳 CARTÕES
+/pessoa [nome]
+Cadastra alguém no sistema.
+Ex: /pessoa joão
+
+/cartao [nome]
+Cadastra um novo cartão.
+Ex: /cartao nubank
+
+📊 LISTAGENS
+/listar [p/c/e] [filtro opcional]
+Busca registros no sistema. Se listar despesas (e) sem mês, puxa o mês atual.
+Ex: /listar e 07 (Lista despesas de Julho)
+Ex: /listar p ativos (Lista pessoas ativas)
+Ex: /listar e p joão 08 (Gastos da joão em Agosto)
+
+⚙️ GERENCIAMENTO
+/apagar [p/c/e] [id/nome]
+Desativa uma pessoa/cartão, ou deleta uma despesa.
+Ex: /apagar p joão
+Ex: /apagar e 15 (Apaga a compra de ID 15)
+
+/ativar [p/c] [nome]
+Reativa uma pessoa ou cartão desativado.
+Ex: /ativar p joão
