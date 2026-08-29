@@ -2,9 +2,11 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"gfinancer/internal/domain"
 )
@@ -31,16 +33,21 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 		return nil, nil, errors.New("formato inválido, esperado pelo menos descrição e valor da compra.")
 	}
 
+	today := time.Now()
+
 	// Numéro de parcelas é 1 por padrão
 	// Usado caso não seja informado o número.
 	expense := &domain.Expense{
 		TotalInstallments: 1,
+		PurchaseDate:      today.Format("2006-01-02"),
 	}
 
 	// Regex para procurar token de parcelamento
 	reInstallment := regexp.MustCompile(`^(\d+)[xX]$`)
 	// Regex para procurar token de valor (dinheiro)
 	reMoney := regexp.MustCompile(`^\d+[.,]\d{2}$`)
+	// Regex para procurar token de data (DD/MM/YYYY)
+	reDate := regexp.MustCompile(`^(\d{2})/(\d{2})(?:/(\d{4}))?$`)
 
 	var descTokens []string
 	var valueFound, cardFound bool
@@ -69,6 +76,22 @@ func ExpenseParser(input string, people map[string]domain.Person, cards map[stri
 			}
 			expense.TotalInstallments = uint8(installments)
 			continue
+		}
+
+		// Data
+		if match := reDate.FindStringSubmatch(tokenLower); match != nil {
+			day := match[1]
+			month := match[2]
+			year := fmt.Sprintf("%d", today.Year())
+			if match[3] != "" {
+				year = match[3]
+			}
+
+			dataString := fmt.Sprintf("%s-%s-%s", year, month, day)
+			if validDate, err := time.Parse("2006-01-02", dataString); err == nil {
+				expense.PurchaseDate = validDate.Format("2006-01-02")
+				continue
+			}
 		}
 
 		// Pessoa
