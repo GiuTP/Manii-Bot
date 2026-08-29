@@ -1,40 +1,16 @@
 package main
 
 import (
+	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+
+	"gfinancer/internal/config"
 	"gfinancer/internal/repository"
 	"gfinancer/internal/services"
 	"gfinancer/internal/telegram"
-	"log"
-	"os"
-	"strconv"
-	"strings"
-
-	"github.com/joho/godotenv"
 )
-
-func loadAdmins() map[int64]bool {
-	adminsStr := os.Getenv("ALLOWED_USERS")
-	if adminsStr == "" {
-		log.Fatal("Nenhum ususário autorizado definido em ALLOWED_USERS")
-	}
-
-	admins := make(map[int64]bool)
-	tokens := strings.Split(adminsStr, ",")
-
-	for _, t := range tokens {
-		t = strings.TrimSpace(t)
-		if t == "" {
-			continue
-		}
-		id, err := strconv.ParseInt(t, 10, 64)
-		if err != nil {
-			log.Fatalf("ID inválido no .env: %s", t)
-		}
-		admins[id] = true
-	}
-
-	return admins
-}
 
 func main() {
 	err := godotenv.Load()
@@ -45,6 +21,11 @@ func main() {
 	token := os.Getenv("TELEGRAM_TOKEN")
 	if token == "" {
 		log.Fatal("TELEGRAM TOKEN não está definido no arquivo .env")
+	}
+
+	users, err := config.LoadAllowedUsers()
+	if err != nil {
+		log.Fatalf("Erro de segurança: %v", err)
 	}
 
 	db, err := repository.InitDB("./data/financas.db")
@@ -61,10 +42,11 @@ func main() {
 	eSvc := services.NewExpenseService(eRepo, pRepo, cRepo)
 	cSvc := services.NewCardService(cRepo)
 	pSvc := services.NewPersonService(pRepo)
+	rSvc := services.NewReportService()
 
-	botService := services.NewBotService(eSvc, cSvc, pSvc)
+	botService := services.NewBotService(eSvc, cSvc, pSvc, rSvc)
 
-	bot, err := telegram.NewTelegramBot(token, botService)
+	bot, err := telegram.NewTelegramBot(token, botService, users)
 	if err != nil {
 		log.Fatal("Erro ao inicializar o bot: ", err)
 	}
