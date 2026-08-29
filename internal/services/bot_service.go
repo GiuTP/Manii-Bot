@@ -3,6 +3,7 @@ package services
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -10,20 +11,22 @@ type BotService struct {
 	eSvc *ExpenseService
 	cSvc *CardService
 	pSvc *PersonService
+	rSvc *ReportService
 }
 
-func NewBotService(e *ExpenseService, c *CardService, p *PersonService) *BotService {
+func NewBotService(e *ExpenseService, c *CardService, p *PersonService, r *ReportService) *BotService {
 	return &BotService{
 		eSvc: e,
 		cSvc: c,
 		pSvc: p,
+		rSvc: r,
 	}
 }
 
-func (s *BotService) HandleMessage(rawMsg string) string {
+func (s *BotService) HandleMessage(rawMsg string) (string, string) {
 	tokens := strings.SplitN(rawMsg, " ", 2)
 	if len(tokens) < 1 {
-		return "Comando vazio."
+		return "Comando vazio.", ""
 	}
 
 	cmd := tokens[0]
@@ -60,8 +63,20 @@ func (s *BotService) HandleMessage(rawMsg string) string {
 	// Reativação
 	case "/ativar":
 		resp, err = s.enable(msg)
-	// Desfazer
-	//case "/desfazer":
+
+	// Relatório
+	case "/relatorio":
+		title, reports, totalStr, err := s.eSvc.GetReportData(msg)
+		if err != nil {
+			return fmt.Sprintf("Erro: %v", err), ""
+		}
+
+		filePath, err := s.rSvc.GeneratePDF(title, reports, totalStr)
+		if err != nil {
+			return fmt.Sprintf("Erro ao gerar arquivo PDF: %v", err), ""
+		}
+
+		return "Aqui está seu extrato!", filePath
 
 	// Help
 	case "/help":
@@ -69,14 +84,14 @@ func (s *BotService) HandleMessage(rawMsg string) string {
 
 	// Comando incorreto
 	default:
-		return "Comando inexistente. Para listagem digite /help"
+		return "Comando inexistente. Para listagem digite /help", ""
 	}
 
 	if err != nil {
-		return "(Falha) " + err.Error()
+		return "(Falha) " + err.Error(), ""
 	}
 
-	return "(Sucesso) " + resp
+	return "(Sucesso) " + resp, ""
 }
 
 func (s *BotService) update(msg string) (string, error) {
