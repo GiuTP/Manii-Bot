@@ -19,13 +19,15 @@ type ExpenseService struct {
 	repo  *repository.ExpenseRepo
 	pRepo *repository.PersonRepo
 	cRepo *repository.CardRepo
+	sRepo *repository.SubscriptionRepo
 }
 
-func NewExpenseService(r *repository.ExpenseRepo, p *repository.PersonRepo, c *repository.CardRepo) *ExpenseService {
+func NewExpenseService(r *repository.ExpenseRepo, p *repository.PersonRepo, c *repository.CardRepo, s *repository.SubscriptionRepo) *ExpenseService {
 	return &ExpenseService{
 		repo:  r,
 		pRepo: p,
 		cRepo: c,
+		sRepo: s,
 	}
 }
 
@@ -156,6 +158,14 @@ func (s *ExpenseService) List(msg string) (string, error) {
 		sb.WriteString(fmt.Sprintf("- %s%s | %s\n", e.Description, installStr, valueStr))
 	}
 
+	subs, _ := s.sRepo.GetActiveInMonth(month, year, personId, cardId)
+	if len(subs) > 0 {
+		sb.WriteString("\nAssinaturas:\n")
+		for _, sub := range subs {
+			sb.WriteString(fmt.Sprintf("- %s | R$ %.2f\n", sub.Description, sub.Value))
+		}
+	}
+
 	return sb.String(), nil
 }
 
@@ -167,10 +177,14 @@ func (s *ExpenseService) GetReportData(msg string) (string, []domain.Report, str
 
 	expenses, err := s.repo.Get(month, year, personId, cardId)
 	if err != nil {
-		return "", nil, "", fmt.Errorf("Falha ao busca no banco de dados: %w", err)
+		return "", nil, "", fmt.Errorf("Falha ao busca despesas no banco de dados: %w", err)
 	}
-	if len(expenses) == 0 {
-		return "", nil, "", fmt.Errorf("Nenhuma fatura encontrada para %02d/%04d", month, year)
+	subs, err := s.sRepo.GetActiveInMonth(month, year, personId, cardId)
+	if err != nil {
+		return "", nil, "", fmt.Errorf("Falha ao buscar assinaturas no banco de dados: %w", err)
+	}
+	if len(expenses) == 0 && len(subs) == 0 {
+		return "", nil, "", fmt.Errorf("Nenhuma fatura ou assinatura encontrada para %02d/%04d", month, year)
 	}
 
 	pMap, _ := s.pRepo.ReadMap()
@@ -212,6 +226,36 @@ func (s *ExpenseService) GetReportData(msg string) (string, []domain.Report, str
 			Description: e.Description,
 			Value:       fmt.Sprintf("R$ %.2f", e.InstallmentValue),
 			Installment: installStr,
+			Person:      personName,
+			Card:        cardName,
+		})
+	}
+
+	for _, sub := range subs {
+		total += sub.Value
+
+		personName := "N/A"
+		if sub.PersonId != nil {
+			personName = capitalize(pById[*sub.PersonId])
+		}
+
+		cardName := "N/A"
+		if sub.CardId != nil {
+			cardName = capitalize(cById[*sub.CardId])
+		}
+
+		// Pega o dia base da assinatura (ex: "15" de "2026-08-15") e projeta no mês do relatório
+		dia := "01"
+		if len(sub.StartDate) >= 10 {
+			dia = sub.StartDate[8:10]
+		}
+		dataRelatorio := fmt.Sprintf("%04d-%02d-%s", year, month, dia)
+
+		reports = append(reports, domain.Report{
+			Date:        dataRelatorio,
+			Description: sub.Description,
+			Value:       fmt.Sprintf("R$ %.2f", sub.Value),
+			Installment: " (Assinatura)",
 			Person:      personName,
 			Card:        cardName,
 		})

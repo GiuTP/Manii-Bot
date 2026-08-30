@@ -12,14 +12,16 @@ type BotService struct {
 	cSvc *CardService
 	pSvc *PersonService
 	rSvc *ReportService
+	sSvc *SubscriptionService
 }
 
-func NewBotService(e *ExpenseService, c *CardService, p *PersonService, r *ReportService) *BotService {
+func NewBotService(e *ExpenseService, c *CardService, p *PersonService, r *ReportService, s *SubscriptionService) *BotService {
 	return &BotService{
 		eSvc: e,
 		cSvc: c,
 		pSvc: p,
 		rSvc: r,
+		sSvc: s,
 	}
 }
 
@@ -114,6 +116,8 @@ func (s *BotService) update(msg string) (string, error) {
 		return s.cSvc.Update(upd)
 	case "e":
 		return s.eSvc.Update(upd)
+	case "s":
+		return s.sSvc.Update(upd)
 	default:
 		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
 	}
@@ -138,6 +142,8 @@ func (s *BotService) delete(msg string) (string, error) {
 		return s.cSvc.Disable(del)
 	case "e":
 		return s.eSvc.Delete(del)
+	case "s":
+		return s.sSvc.Cancel(del)
 	default:
 		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
 	}
@@ -162,6 +168,8 @@ func (s *BotService) list(msg string) (string, error) {
 		return s.cSvc.List(flag)
 	case "e":
 		return s.eSvc.List(flag)
+	case "s":
+		return s.sSvc.List(flag)
 	default:
 		return "", errors.New("Subcomando inexistente. Use: p, c ou e")
 	}

@@ -67,6 +67,18 @@ func createTables(db *sql.DB) error {
 		payment_status INTEGER NOT NULL, -- 0 para pendente, 1 para pago
 		FOREIGN KEY(expense_id) REFERENCES expenses(id)
 	);
+
+	CREATE TABLE IF NOT EXISTS subscriptions(
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		description TEXT NOT NULL,
+		value REAL NOT NULL,
+		start_date TEXT NOT NULL,
+		end_date TEXT,
+		person_id INTEGER,
+		card_id INTEGER,
+		FOREIGN KEY(person_id) REFERENCES persons(id)
+		FOREIGN KEY(card_id) REFERENCES cards(id)
+	);
 	`
 
 	_, err := db.Exec(query)
