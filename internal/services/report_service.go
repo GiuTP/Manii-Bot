@@ -26,8 +26,10 @@ func (s *ReportService) GeneratePDF(title string, expenses []domain.Report, tota
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
 
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
+
 	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(190, 10, title, "", 1, "C", false, 0, "")
+	pdf.CellFormat(190, 10, tr(title), "", 1, "C", false, 0, "")
 	pdf.Ln(5)
 
 	for _, exp := range expenses {
@@ -37,14 +39,14 @@ func (s *ReportService) GeneratePDF(title string, expenses []domain.Report, tota
 		cleanDesc := truncate(exp.Description, 30)
 		line1 := fmt.Sprintf("%s - %s%s", exp.Date, cleanDesc, exp.Installment)
 
-		pdf.CellFormat(140, 6, line1, "", 0, "L", false, 0, "")
-		pdf.CellFormat(50, 6, exp.Value, "", 1, "R", false, 0, "")
+		pdf.CellFormat(140, 6, tr(line1), "", 0, "L", false, 0, "")
+		pdf.CellFormat(50, 6, tr(exp.Value), "", 1, "R", false, 0, "")
 
 		pdf.SetFont("Arial", "I", 10)
 		pdf.SetTextColor(128, 128, 128)
 
 		line2 := fmt.Sprintf("Pessoa: %s  |   Cartão: %s", exp.Person, exp.Card)
-		pdf.CellFormat(190, 6, line2, "", 1, "L", false, 0, "")
+		pdf.CellFormat(190, 6, tr(line2), "", 1, "L", false, 0, "")
 
 		pdf.Ln(4)
 	}
@@ -52,8 +54,8 @@ func (s *ReportService) GeneratePDF(title string, expenses []domain.Report, tota
 	pdf.Ln(5)
 	pdf.SetFont("Arial", "B", 14)
 	pdf.SetTextColor(0, 0, 0)
-	pdf.CellFormat(140, 10, "TOTAL DO MES:", "T", 0, "L", false, 0, "")
-	pdf.CellFormat(50, 10, total, "T", 1, "R", false, 0, "")
+	pdf.CellFormat(140, 10, tr("TOTAL DO MÊS:"), "T", 0, "L", false, 0, "")
+	pdf.CellFormat(50, 10, tr(total), "T", 1, "R", false, 0, "")
 
 	fileName := fmt.Sprintf("./relatorio_%d.pdf", time.Now().Unix())
 
