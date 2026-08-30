@@ -20,7 +20,7 @@ func main() {
 
 	token := os.Getenv("TELEGRAM_TOKEN")
 	if token == "" {
-		log.Fatal("TELEGRAM TOKEN não está definido no arquivo .env")
+		log.Fatal("TELEGRAM_TOKEN não está definido no arquivo .env")
 	}
 
 	users, err := config.LoadAllowedUsers()
@@ -28,7 +28,12 @@ func main() {
 		log.Fatalf("Erro de segurança: %v", err)
 	}
 
-	db, err := repository.InitDB("./data/financas.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./data/finance.db"
+	}
+
+	db, err := repository.InitDB(dbPath)
 	if err != nil {
 		log.Fatalf("Falha crítica ao inicializar o banco: %v\n", err)
 	}
@@ -38,13 +43,15 @@ func main() {
 	eRepo := repository.NewExpenseRepo(db)
 	cRepo := repository.NewCardRepo(db)
 	pRepo := repository.NewPersonRepo(db)
+	sRepo := repository.NewSubscriptionRepo(db)
 
-	eSvc := services.NewExpenseService(eRepo, pRepo, cRepo)
+	eSvc := services.NewExpenseService(eRepo, pRepo, cRepo, sRepo)
 	cSvc := services.NewCardService(cRepo)
 	pSvc := services.NewPersonService(pRepo)
+	sSvc := services.NewSubService(sRepo, pRepo, cRepo)
 	rSvc := services.NewReportService()
 
-	botService := services.NewBotService(eSvc, cSvc, pSvc, rSvc)
+	botService := services.NewBotService(eSvc, cSvc, pSvc, rSvc, sSvc)
 
 	bot, err := telegram.NewTelegramBot(token, botService, users)
 	if err != nil {
