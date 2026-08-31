@@ -90,39 +90,40 @@ func (r *ExpenseRepo) Save(expense *domain.Expense, card *domain.Card) error {
 
 // Get busca todas as despesas cadastradas no banco de dados ordenadas pela data de compra mais recente para a mais antiga.
 // Retorna um slice com todas as despesas encontradas, ou um erro se a consulta falhar.
-func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, error) {
+func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.ExpenseDTO, error) {
 	month := fmt.Sprintf("%02d", m)
 	year := fmt.Sprintf("%04d", y)
 
 	query := `
         SELECT 
-            id,
-            description,
-            total_value,
-            purchase_date,
-            total_installments,
-            person_id,
-            card_id,
-            installment_value,
-            current_installment,
-            due_date
-        FROM expenses 
-        WHERE strftime('%m', due_date) = ? AND strftime('%Y', due_date) = ?
+            e.id,
+            e.description,
+            e.total_value,
+            e.purchase_date,
+            e.total_installments,
+            e.person_id,
+            e.card_id,
+            i.value,
+            i.number_installments,
+            i.due_date
+        FROM installments i
+        INNER JOIN expenses e ON i.expense_id = e.id
+        WHERE strftime('%m', i.due_date) = ? AND strftime('%Y', i.due_date) = ?
     `
 
 	args := []any{month, year}
 
 	if pId != 0 {
-		query += ` AND person_id = ?`
+		query += ` AND e.person_id = ?`
 		args = append(args, pId)
 	}
 
 	if cId != 0 {
-		query += ` AND card_id = ?`
+		query += ` AND e.card_id = ?`
 		args = append(args, cId)
 	}
 
-	query += ` ORDER BY due_date ASC`
+	query += ` ORDER BY i.due_date ASC`
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -131,9 +132,9 @@ func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, e
 
 	defer rows.Close()
 
-	var expenses []domain.Expense
+	var expenses []domain.ExpenseDTO
 	for rows.Next() {
-		var e domain.Expense
+		var e domain.ExpenseDTO
 
 		err := rows.Scan(
 			&e.Id,

@@ -9,8 +9,12 @@ type Expense struct {
 	TotalInstallments uint8   // Quantidade de parcelas
 	PersonId          *uint   // Quem fez a compra. Campo opcional
 	CardId            *uint   // Cartão onde foi feito a compra. Campo opcional
+}
 
-	InstallmentValue   float64 // Valor da parcela atual
-	CurrentInstallment uint8   // Parcela atual
-	DueDate            string  // Data de vencimento da parcela
+// ExpenseDTO é usada para transferir os dados mesclados de despesas e parcelas para a listagem
+type ExpenseDTO struct {
+	Expense
+	InstallmentValue   float64
+	CurrentInstallment uint8
+	DueDate            string
 }
