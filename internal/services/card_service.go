@@ -22,8 +22,8 @@ func NewCardService(r *repository.CardRepo) *CardService {
 
 func (s *CardService) Create(msg string) (string, error) {
 	tokens := strings.Fields(msg)
-	if len(tokens) < 4 {
-		return "", errors.New("Use: [nome] [tipo] [dia_fechamento] [dia_vencimento]")
+	if len(tokens) != 4 {
+		return "", errors.New("Use: [nome_sem_espacos] [tipo] [dia_fechamento] [dia_vencimento]")
 	}
 
 	cMap, err := s.repo.ReadMap()
@@ -32,13 +32,13 @@ func (s *CardService) Create(msg string) (string, error) {
 	}
 
 	// Separação de atributos
-	name := strings.ToLower(strings.Join(tokens[0:len(tokens)-3], " "))
+	name := strings.ToLower(tokens[0])
 	// Futuramente vou dá suporte a nome repetido usando chave composta.
 	if _, exists := cMap[name]; exists {
 		return "", errors.New("Nome de cartão já usado.")
 	}
 	var typ uint8
-	switch tokens[len(tokens)-3] {
+	switch strings.ToLower(tokens[1]) {
 	case "credito", "crédito":
 		typ = 0
 	case "débito", "debito":
@@ -46,11 +46,11 @@ func (s *CardService) Create(msg string) (string, error) {
 	default:
 		return "", errors.New("Tipo de cartão inválido. Tente: crédito ou débito")
 	}
-	closingD, err := strconv.ParseUint(tokens[len(tokens)-2], 10, 8)
+	closingD, err := strconv.ParseUint(tokens[2], 10, 8)
 	if err != nil {
 		return "", fmt.Errorf("Erro de conversão de fechamento: %w", err)
 	}
-	dueD, err := strconv.ParseUint(tokens[len(tokens)-1], 10, 8)
+	dueD, err := strconv.ParseUint(tokens[3], 10, 8)
 	if err != nil {
 		return "", fmt.Errorf("Erro de conversão de vencimento: %w", err)
 	}
