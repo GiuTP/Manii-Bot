@@ -95,35 +95,34 @@ func (r *ExpenseRepo) Get(m int, y int, pId uint, cId uint) ([]domain.Expense, e
 	year := fmt.Sprintf("%04d", y)
 
 	query := `
-		SELECT 
-			e.id,
-			e.description,
-			e.total_value,
-			e.purchase_date,
-			e.total_installments,
-			e.person_id,
-			e.card_id,
-			i.value,
-			i.number_installments,
-			i.due_date
-		FROM installments i
-		INNER JOIN expenses e ON i.expense_id = e.id
-		WHERE strftime('%m', i.due_date) = ? AND strftime('%Y', i.due_date) = ?
-	`
+        SELECT 
+            id,
+            description,
+            total_value,
+            purchase_date,
+            total_installments,
+            person_id,
+            card_id,
+            installment_value,
+            current_installment,
+            due_date
+        FROM expenses 
+        WHERE strftime('%m', due_date) = ? AND strftime('%Y', due_date) = ?
+    `
 
 	args := []any{month, year}
 
 	if pId != 0 {
-		query += ` AND e.person_id = ?`
+		query += ` AND person_id = ?`
 		args = append(args, pId)
 	}
 
 	if cId != 0 {
-		query += ` AND e.card_id = ?`
+		query += ` AND card_id = ?`
 		args = append(args, cId)
 	}
 
-	query += ` ORDER BY i.due_date ASC`
+	query += ` ORDER BY due_date ASC`
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

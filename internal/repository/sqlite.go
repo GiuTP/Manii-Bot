@@ -54,6 +54,9 @@ func createTables(db *sql.DB) error {
 		total_installments INTEGER NOT NULL,
 		person_id INTEGER,
 		card_id INTEGER,
+		installment_value REAL,
+		current_installment INTEGER,
+		due_date TEXT,
 		FOREIGN KEY(person_id) REFERENCES persons(id),
 		FOREIGN KEY(card_id) REFERENCES cards(id)
 	);
@@ -76,7 +79,7 @@ func createTables(db *sql.DB) error {
 		end_date TEXT,
 		person_id INTEGER,
 		card_id INTEGER,
-		FOREIGN KEY(person_id) REFERENCES persons(id)
+		FOREIGN KEY(person_id) REFERENCES persons(id),
 		FOREIGN KEY(card_id) REFERENCES cards(id)
 	);
 	`
