@@ -82,9 +82,8 @@ func (r *CardRepo) ReadMap() (map[string]domain.Card, error) {
 // Retorna um sliced com todas os cartõtes encontradas, ou um erro se a consulta falhar.
 func (r *CardRepo) GetAll() ([]domain.Card, error) {
 	query := `
-		SELECT id, name, type, closing_day, due_day 
+		SELECT id, name, active , type, closing_day, due_day 
 		FROM cards
-		WHERE id = 1
 		ORDER BY name
 	`
 
@@ -102,6 +101,7 @@ func (r *CardRepo) GetAll() ([]domain.Card, error) {
 		err := rows.Scan(
 			&c.Id,
 			&c.Name,
+			&c.Active,
 			&c.Type,
 			&c.ClosingDay,
 			&c.DueDay,
