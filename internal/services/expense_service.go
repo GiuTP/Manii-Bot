@@ -226,8 +226,14 @@ func (s *ExpenseService) GetReportData(msg string) (string, []domain.Report, str
 			cardName = capitalize(cById[*e.CardId])
 		}
 
+		formatDate := e.PurchaseDate
+		parts := strings.Split(e.PurchaseDate, "-")
+		if len(parts) == 3 {
+			formatDate = fmt.Sprintf("%s/%s/%s", parts[2], parts[1], parts[0])
+		}
+
 		reports = append(reports, domain.Report{
-			Date:        e.DueDate,
+			Date:        formatDate,
 			Description: e.Description,
 			Value:       fmt.Sprintf("R$ %.2f", e.InstallmentValue),
 			Installment: installStr,

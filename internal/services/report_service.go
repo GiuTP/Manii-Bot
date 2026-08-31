@@ -32,7 +32,7 @@ func (s *ReportService) GeneratePDF(title string, expenses []domain.Report, tota
 	pdf.CellFormat(190, 10, tr(title), "", 1, "C", false, 0, "")
 	pdf.Ln(5)
 
-	for _, exp := range expenses {
+	for i, exp := range expenses {
 		pdf.SetFont("Arial", "", 12)
 		pdf.SetTextColor(0, 0, 0)
 
@@ -49,11 +49,19 @@ func (s *ReportService) GeneratePDF(title string, expenses []domain.Report, tota
 		pdf.CellFormat(190, 6, tr(line2), "", 1, "L", false, 0, "")
 
 		pdf.Ln(4)
+
+		if i < len(expenses)-1 {
+			pdf.SetDrawColor(230, 230, 230)
+			y := pdf.GetY()
+			pdf.Line(10, y, 200, y)
+			pdf.Ln(4)
+		}
 	}
 
 	pdf.Ln(5)
 	pdf.SetFont("Arial", "B", 14)
 	pdf.SetTextColor(0, 0, 0)
+	pdf.SetDrawColor(0, 0, 0)
 	pdf.CellFormat(140, 10, tr("TOTAL DO MÊS:"), "T", 0, "L", false, 0, "")
 	pdf.CellFormat(50, 10, tr(total), "T", 1, "R", false, 0, "")
 
