@@ -66,7 +66,7 @@ func (r *SubscriptionRepo) GetActiveInMonth(m int, y int, pId uint, cId uint) ([
 
 	query := `
 		SELECT id, description, value, start_date, end_date, person_id, card_id
-		FROM subcriptions
+		FROM subscriptions
 		WHERE strftime('%Y-%m', start_date) <= ?
 			AND (end_date IS NULL OR strftime('%Y-%m', end_date) >= ?)
 	`

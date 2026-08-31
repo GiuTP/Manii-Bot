@@ -138,17 +138,21 @@ func (s *ExpenseService) List(msg string) (string, error) {
 
 	expenses, err := s.repo.Get(month, year, personId, cardId)
 	if err != nil {
-		return "", fmt.Errorf("Falha ao carregar do banco de dados: %w", err)
+		return "", fmt.Errorf("Falha ao carregar do banco de dados de expenses: %w", err)
 	}
-
-	if len(expenses) == 0 {
+	subs, err := s.sRepo.GetActiveInMonth(month, year, personId, cardId)
+	if err != nil {
+		return "", fmt.Errorf("Falha ao carregar do banco de dados subscriptions: %w", err)
+	}
+	if len(expenses) == 0 && len(subs) == 0 {
 		return fmt.Sprintf("Nenhuma compra encontrada para %02d/%02d", month, year), nil
 	}
 
 	var sb strings.Builder
+	var totalValue float64
 	sb.WriteString(fmt.Sprintf("Compras (%02d/%02d): \n\n", month, year))
-
 	for _, e := range expenses {
+		totalValue += e.InstallmentValue
 		valueStr := fmt.Sprintf("R$ %.2f", e.InstallmentValue)
 
 		installStr := ""
@@ -158,13 +162,14 @@ func (s *ExpenseService) List(msg string) (string, error) {
 		sb.WriteString(fmt.Sprintf("- %s%s | %s\n", e.Description, installStr, valueStr))
 	}
 
-	subs, _ := s.sRepo.GetActiveInMonth(month, year, personId, cardId)
 	if len(subs) > 0 {
 		sb.WriteString("\nAssinaturas:\n")
 		for _, sub := range subs {
 			sb.WriteString(fmt.Sprintf("- %s | R$ %.2f\n", sub.Description, sub.Value))
 		}
 	}
+
+	sb.WriteString(fmt.Sprintf("\nTotal: R$ %.2f", totalValue))
 
 	return sb.String(), nil
 }
@@ -244,12 +249,11 @@ func (s *ExpenseService) GetReportData(msg string) (string, []domain.Report, str
 			cardName = capitalize(cById[*sub.CardId])
 		}
 
-		// Pega o dia base da assinatura (ex: "15" de "2026-08-15") e projeta no mês do relatório
-		dia := "01"
+		day := "01"
 		if len(sub.StartDate) >= 10 {
-			dia = sub.StartDate[8:10]
+			day = sub.StartDate[8:10]
 		}
-		dataRelatorio := fmt.Sprintf("%04d-%02d-%s", year, month, dia)
+		dataRelatorio := fmt.Sprintf("%s/%02d/%04d", day, month, year)
 
 		reports = append(reports, domain.Report{
 			Date:        dataRelatorio,
