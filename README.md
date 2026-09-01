@@ -4,7 +4,7 @@ Um bot de Telegram desenvolvido em Go para controle financeiro pessoal e gestão
 
 O Manii-Bot foi criado para substituir planilhas complexas por uma interface conversacional rápida. Ele recebe comandos simples pelo dispositivo, calcula projeções de parcelamentos, gerencia dias de fechamentos de faturas e consolida gastos mensais em relatórios detalhados.
 
-Projeto está pronto para uso, apesar de está em desenvolvimento, então bugs ou erros podem ser encontrados.
+O projeto está pronto para uso, apesar de estar em desenvolvimento, então bugs ou erros podem ser encontrados.
 
 ## :rocket: Funcionalidades
 
@@ -31,7 +31,7 @@ Projeto está pronto para uso, apesar de está em desenvolvimento, então bugs o
 1. Clone o repositório:
 ```bash
 git clone git@github.com:GiuTP/Manii-Bot.git
-cd manii-bot
+cd Manii-Bot
 ```
 
 2. Baixe as dependências:
@@ -41,9 +41,9 @@ go mod tidy
 
 3. Configure as variáveis de ambiente (crie um arquivo `.env` na raiz):
 ```.env
-TELEGRAM_TOKEN=SEU_TOKEN_AQUI
-ALLOWED_USERS=ID_TELEGRAM
-DB_PATH = caminho/para/seu/banco/de/dados
+TELEGRAM_TOKEN=SEU_TOKEN_AQUI (via @BotFather)
+ALLOWED_USERS=ID_TELEGRAM (via @userinfobot)
+DB_PATH=caminho/para/seu/banco/de/dados
 ```
 
 4. Execute o bot:
@@ -57,11 +57,11 @@ go run cmd/bot/main.go
 
 Envie comandos diretamente para o seu bot no Telegram. Exemplos:
 * **Criar cartão:**`/cartao banco credito 25 2` (nome, tipo, fechamento, vencimento)
-* **Registrar compra:**`/compra [LOJA] Compra A 3x 5.00 banco pessoa 01/01/2007`
-* **Listar fatura:**`listar e 8` (listar todas as movimentações do mês 8)
+* **Registrar compra:**`/compra Compra A 3x 5.00 banco pessoa 01/01/2007`
+* **Listar fatura:**`/listar e 8` (listar todas as movimentações do mês 8)
 * **Extrato de uma pessoa:** `listar e p pessoa 8`
 
-Para a listar completa junto de suas sintaxe, mande `/help` para o bot.
+Para a lista completa dos comandos junto de suas sintaxes e detalhamentos, mande `/help` para o bot.
 
 # :page_facing_up: Licença
-Este projeto está sob a licença [ GPLv3](LICENSE).
+Este projeto está sob a licença [GPLv3](LICENSE).
