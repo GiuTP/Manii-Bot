@@ -25,7 +25,7 @@ O projeto está pronto para uso, apesar de estar em desenvolvimento, então bugs
 ### Pré-requisitos
 * Go 1.21 ou superior instalado
 * Token de um bot no Telegram
-* GCC instaldo (necessário para o driver do SQLite em Go)
+* GCC instalado (necessário para o driver do SQLite em Go)
 
 ### Instalação
 1. Clone o repositório:
