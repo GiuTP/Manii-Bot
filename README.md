@@ -63,5 +63,21 @@ Envie comandos diretamente para o seu bot no Telegram. Exemplos:
 
 Para a lista completa dos comandos junto de suas sintaxes e detalhamentos, mande `/help` para o bot.
 
+### :mag: Demonstração
+Um exemplo visual de como é a conversa com o bot. Foram feitos os seguintes comandos:
+
+1. **Criação de entidades:** criação da pessoa (`JoãoM`) e do cartão (`CartãoT`).
+2. **Registro de despesa:** inserção de uma compra parcelada vinculando a pessoa e o cartão
+3. **Consulta e filtros:** listagem filtrada por responsável (`JoãoM`).
+4. **Relatório**: geração do extrato mensal em PDF.
+5. **Manutenção:** atualização da descrição da despesa e posteriomente remorção do registro.
+
+![Interação com o bot no Telegram](docs/screenshots/tela_bot.png)
+
+### Layout do Relatório Gerado
+O extrato exportado organiza os lançamentos com ordenação, detalhes de parcelamento e linhas divisórias:
+
+![Extrato em PDF](docs/screenshots/tela_extrato.png)
+
 # :page_facing_up: Licença
 Este projeto está sob a licença [GPLv3](LICENSE).
