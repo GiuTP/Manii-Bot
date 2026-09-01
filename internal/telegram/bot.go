@@ -42,6 +42,7 @@ func (b *TelegramBot) Start() {
 		userID := update.Message.From.ID
 		if !b.allowedUsers[userID] {
 			log.Printf("ACESSO BLOQUEADO: usuário %s (ID: %d) tentou interagir com o bot", update.Message.From.UserName, userID)
+			continue
 		}
 
 		textResp, filePath := b.service.HandleMessage(update.Message.Text)
