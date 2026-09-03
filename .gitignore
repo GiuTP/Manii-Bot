@@ -4,4 +4,6 @@
 .env.*
 *.local
 
+main
+
 .vscode/
